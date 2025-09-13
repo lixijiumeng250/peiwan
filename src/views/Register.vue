@@ -3,7 +3,6 @@
     <div class="auth-container">
       <div class="auth-card">
         <h2 class="auth-title">注册</h2>
-        <p class="auth-subtitle">创建您的陪玩管理系统账号</p>
         
         <form @submit.prevent="handleRegister" class="auth-form">
           <div class="form-group">
@@ -21,31 +20,17 @@
           </div>
           
           <div class="form-group">
-            <label for="email">邮箱</label>
+            <label for="realName">真实姓名</label>
             <input
-              id="email"
-              type="email"
-              v-model="registerForm.email"
-              placeholder="请输入邮箱地址"
+              id="realName"
+              type="text"
+              v-model="registerForm.realName"
+              placeholder="请输入真实姓名"
               required
               class="form-input"
-              :class="{ 'error': errors.email }"
+              :class="{ 'error': errors.realName }"
             />
-            <span v-if="errors.email" class="error-message">{{ errors.email }}</span>
-          </div>
-          
-          <div class="form-group">
-            <label for="phone">手机号</label>
-            <input
-              id="phone"
-              type="tel"
-              v-model="registerForm.phone"
-              placeholder="请输入手机号"
-              required
-              class="form-input"
-              :class="{ 'error': errors.phone }"
-            />
-            <span v-if="errors.phone" class="error-message">{{ errors.phone }}</span>
+            <span v-if="errors.realName" class="error-message">{{ errors.realName }}</span>
           </div>
           
           <div class="form-group">
@@ -119,6 +104,7 @@
 </template>
 
 <script>
+import { ElMessage } from 'element-plus'
 import authStore from '../store/auth'
 
 export default {
@@ -127,8 +113,7 @@ export default {
     return {
       registerForm: {
         username: '',
-        email: '',
-        phone: '',
+        realName: '',
         password: '',
         confirmPassword: ''
       },
@@ -136,8 +121,7 @@ export default {
       errors: {},
       showPassword: false,
       showConfirmPassword: false,
-      usernameCheckTimeout: null,
-      emailCheckTimeout: null
+      usernameCheckTimeout: null
     }
   },
   computed: {
@@ -153,11 +137,8 @@ export default {
     'registerForm.username'() {
       this.debouncedValidateUsername()
     },
-    'registerForm.email'() {
-      this.debouncedValidateEmail()
-    },
-    'registerForm.phone'() {
-      this.validatePhone()
+    'registerForm.realName'() {
+      this.validateRealName()
     },
     'registerForm.password'() {
       this.validatePassword()
@@ -179,13 +160,6 @@ export default {
       }, 500)
     },
     
-    // 防抖验证邮箱
-    debouncedValidateEmail() {
-      clearTimeout(this.emailCheckTimeout)
-      this.emailCheckTimeout = setTimeout(() => {
-        this.validateEmail()
-      }, 500)
-    },
     
     // 验证用户名
     async validateUsername() {
@@ -225,51 +199,26 @@ export default {
       }
     },
     
-    // 验证邮箱
-    async validateEmail() {
-      const email = this.registerForm.email
+    // 验证真实姓名
+    validateRealName() {
+      const realName = this.registerForm.realName
       
-      if (!email) {
-        delete this.errors.email
+      if (!realName) {
+        delete this.errors.realName
         return
       }
       
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(email)) {
-        this.errors.email = '请输入有效的邮箱地址'
-        return
-      }
-      
-      // 检查邮箱可用性
-      try {
-        const isAvailable = await authStore.actions.checkEmail(email)
-        if (!isAvailable) {
-          this.errors.email = '邮箱已被注册'
-        } else {
-          delete this.errors.email
-        }
-      } catch (error) {
-        console.warn('检查邮箱可用性失败:', error)
-        delete this.errors.email
+      if (realName.length < 2) {
+        this.errors.realName = '真实姓名至少需要2个字符'
+      } else if (realName.length > 10) {
+        this.errors.realName = '真实姓名不能超过10个字符'
+      } else if (!/^[\u4e00-\u9fa5a-zA-Z\s]+$/.test(realName)) {
+        this.errors.realName = '真实姓名只能包含中文、英文字母和空格'
+      } else {
+        delete this.errors.realName
       }
     },
     
-    // 验证手机号
-    validatePhone() {
-      const phone = this.registerForm.phone
-      
-      if (!phone) {
-        delete this.errors.phone
-        return
-      }
-      
-      const phoneRegex = /^1[3-9]\d{9}$/
-      if (!phoneRegex.test(phone)) {
-        this.errors.phone = '请输入有效的手机号'
-      } else {
-        delete this.errors.phone
-      }
-    },
     
     // 验证密码
     validatePassword() {
@@ -310,13 +259,12 @@ export default {
     // 验证整个表单
     validateForm() {
       this.validateUsername()
-      this.validateEmail()
-      this.validatePhone()
+      this.validateRealName()
       this.validatePassword()
       this.validateConfirmPassword()
       
       // 检查必填字段
-      const requiredFields = ['username', 'email', 'phone', 'password', 'confirmPassword']
+      const requiredFields = ['username', 'realName', 'password', 'confirmPassword']
       requiredFields.forEach(field => {
         if (!this.registerForm[field]) {
           this.errors[field] = '此字段为必填项'
@@ -343,7 +291,12 @@ export default {
       }
       
       if (!this.agreeTerms) {
-        alert('请同意服务条款和隐私政策')
+        ElMessage({
+          message: '请同意服务条款和隐私政策',
+          type: 'warning',
+          duration: 3000,
+          showClose: true
+        })
         return
       }
       
@@ -351,25 +304,42 @@ export default {
         // 调用注册API
         const result = await authStore.actions.register({
           username: this.registerForm.username,
-          email: this.registerForm.email,
-          phone: this.registerForm.phone,
-          password: this.registerForm.password
+          realName: this.registerForm.realName,
+          password: this.registerForm.password,
+          confirmPassword: this.registerForm.confirmPassword
         })
         
         if (result.success) {
           // 注册成功
-          alert(`注册成功！欢迎加入，${result.user?.username || '用户'}！`)
+          ElMessage({
+            message: `注册成功！欢迎加入，${result.user?.username || '用户'}！`,
+            type: 'success',
+            duration: 3000,
+            showClose: true
+          })
           
-          // 跳转到登录页面
-          this.$router.push('/login')
+          // 延迟跳转到登录页面，让用户看到成功提示
+          setTimeout(() => {
+            this.$router.push('/login')
+          }, 1500)
         } else {
           // 注册失败，显示错误消息
-          alert(result.message || '注册失败，请稍后重试')
+          ElMessage({
+            message: result.message || '注册失败，请稍后重试',
+            type: 'error',
+            duration: 4000,
+            showClose: true
+          })
         }
         
       } catch (error) {
         console.error('注册过程发生错误:', error)
-        alert('注册过程中发生错误，请稍后重试')
+        ElMessage({
+          message: '注册过程中发生错误，请稍后重试',
+          type: 'error',
+          duration: 4000,
+          showClose: true
+        })
       }
     },
     
@@ -387,8 +357,7 @@ export default {
     quickFill() {
       this.registerForm = {
         username: 'testuser' + Date.now().toString().slice(-4),
-        email: `test${Date.now().toString().slice(-4)}@example.com`,
-        phone: '13800138000',
+        realName: '测试用户',
         password: 'test123456',
         confirmPassword: 'test123456'
       }
@@ -411,7 +380,6 @@ export default {
   // 组件卸载时清理
   beforeUnmount() {
     clearTimeout(this.usernameCheckTimeout)
-    clearTimeout(this.emailCheckTimeout)
     authStore.actions.clearError()
   }
 }

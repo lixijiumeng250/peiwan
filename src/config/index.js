@@ -2,8 +2,8 @@
 export default {
   // API配置
   api: {
-    // 基础URL - 生产环境需要替换为实际的后端地址
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
+    // 基础URL - 连接到真实后端服务器
+    baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
     // 请求超时时间
     timeout: 10000,
     // 重试次数
@@ -13,8 +13,8 @@ export default {
   // 认证配置
   auth: {
     // Token存储键名
-    tokenKey: 'access_token',
-    refreshTokenKey: 'refresh_token',
+    tokenKey: 'accessToken',
+    refreshTokenKey: 'refreshToken',
     userInfoKey: 'user_info',
     // Token过期前多少秒开始刷新
     refreshBeforeExpire: 300
@@ -31,13 +31,13 @@ export default {
   dev: {
     // 是否启用调试日志
     enableLog: import.meta.env.DEV || true,
-    // 是否启用mock数据 - 临时启用以便前端独立运行
-    enableMock: true,
+    // 是否启用mock数据 - 后端已开发完成，使用真实API
+    enableMock: false,
     // 演示账号
     demoAccounts: [
       {
         username: 'admin',
-        password: 'admin123',
+        password: '123456',
         role: 'admin',
         description: '管理员账号'
       },

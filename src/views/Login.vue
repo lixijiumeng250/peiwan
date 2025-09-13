@@ -71,6 +71,7 @@
 
 <script>
 import authStore from '../store/auth'
+import { ElMessage } from 'element-plus'
 
 export default {
   name: 'Login',
@@ -91,6 +92,9 @@ export default {
     },
     errorMessage() {
       return authStore.getters.error.value
+    },
+    isDev() {
+      return import.meta.env.DEV
     }
   },
   methods: {
@@ -145,22 +149,56 @@ export default {
         })
         
         if (result.success) {
-          // 登录成功，显示成功消息
+          // 登录成功，显示成功消息（顶部轻提示）
           this.$nextTick(() => {
-            alert(`欢迎回来，${result.user?.username || '用户'}！`)
+            ElMessage({
+              message: `欢迎回来，${result.user?.username || '用户'}！`,
+              type: 'success',
+              duration: 2000,
+              offset: 12
+            })
           })
           
-          // 跳转到首页或之前访问的页面
-          const redirect = this.$route.query.redirect || '/'
-          this.$router.push(redirect)
+          // 等待状态更新完成后再跳转
+          await this.$nextTick()
+          
+          // 根据用户角色跳转到不同的页面
+          let redirectPath = this.$route.query.redirect
+          if (!redirectPath) {
+            // 如果没有重定向路径，根据角色判断
+            const userRole = result.user?.role?.toUpperCase()
+            if (userRole === 'ADMIN') {
+              redirectPath = '/admin'
+            } else if (userRole === 'EMPLOYEE') {
+              redirectPath = '/employee'
+            } else if (userRole === 'CS') {
+              redirectPath = '/customer-service'
+            } else {
+              redirectPath = '/employee' // 默认跳转到员工页面
+            }
+          }
+          
+          // 使用setTimeout确保状态完全更新后再跳转
+          setTimeout(() => {
+            this.$router.push(redirectPath)
+          }, 100)
         } else {
-          // 登录失败，显示错误消息
-          alert(result.message || '登录失败，请检查用户名和密码')
+          ElMessage({
+            message: result.message || '用户名或密码错误',
+            type: 'error',
+            duration: 3000,
+            offset: 12
+          })
         }
         
       } catch (error) {
         console.error('登录过程发生错误:', error)
-        alert('登录过程中发生错误，请稍后重试')
+        ElMessage({
+          message: '登录过程中发生错误，请稍后重试',
+          type: 'error',
+          duration: 3000,
+          offset: 12
+        })
       }
     },
     
@@ -179,7 +217,7 @@ export default {
     quickLogin(role = 'user') {
       if (role === 'admin') {
         this.loginForm.username = 'admin'
-        this.loginForm.password = 'admin123'
+        this.loginForm.password = '123456'
       } else {
         this.loginForm.username = 'testuser'
         this.loginForm.password = 'test123'

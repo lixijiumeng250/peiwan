@@ -6,29 +6,26 @@
         <span class="site-name">陪玩管理系统</span>
       </div>
       <nav class="nav">
-        <router-link to="/" class="nav-item">首页</router-link>
-        <router-link 
-          v-if="userRole === 'admin'" 
-          to="/admin" 
-          class="nav-item"
-        >
-          管理员
-        </router-link>
-        <router-link 
-          v-if="userRole === 'customer-service'" 
-          to="/customer-service" 
-          class="nav-item"
-        >
-          客服管理
-        </router-link>
-        <router-link 
-          v-if="userRole === 'user'" 
-          to="/employee" 
-          class="nav-item"
-        >
-          员工主页
-        </router-link>
-        <router-link to="/about" class="nav-item">关于</router-link>
+        <!-- 员工角色只显示员工主页 -->
+        <template v-if="userRole?.toUpperCase() === 'EMPLOYEE'">
+          <router-link to="/employee" class="nav-item">员工页面</router-link>
+        </template>
+        
+        <!-- 客服角色只显示客服管理 -->
+        <template v-else-if="userRole?.toUpperCase() === 'CS'">
+          <router-link to="/customer-service" class="nav-item">客服页面</router-link>
+        </template>
+        
+        <!-- 管理员角色只显示管理员页面 -->
+        <template v-else-if="userRole?.toUpperCase() === 'ADMIN'">
+          <router-link to="/admin" class="nav-item">管理员页面</router-link>
+        </template>
+        
+        <!-- 其他情况（未登录或其他角色）显示基础导航 -->
+        <template v-else>
+          <router-link to="/" class="nav-item">首页</router-link>
+          <router-link to="/about" class="nav-item">关于</router-link>
+        </template>
       </nav>
       <div class="auth-nav">
         <!-- 未登录状态 -->
@@ -46,20 +43,19 @@
                 :size="32"
                 class="user-avatar"
               >
-                {{ currentUser?.username?.charAt(0)?.toUpperCase() }}
+                {{ currentUser?.realName?.charAt(0) || currentUser?.username?.charAt(0)?.toUpperCase() }}
               </el-avatar>
-              <span class="username">{{ currentUser?.username }}</span>
+              <div class="user-text">
+                <span class="username">{{ currentUser?.username }}</span>
+                <span class="real-name" v-if="currentUser?.realName">{{ currentUser?.realName }}</span>
+              </div>
               <el-icon class="dropdown-icon"><ArrowDown /></el-icon>
             </div>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="profile">
-                  <el-icon><User /></el-icon>
-                  个人资料
-                </el-dropdown-item>
-                <el-dropdown-item command="settings">
-                  <el-icon><Setting /></el-icon>
-                  设置
+                <el-dropdown-item command="change-password">
+                  <el-icon><Lock /></el-icon>
+                  修改密码
                 </el-dropdown-item>
                 <el-dropdown-item divided command="logout">
                   <el-icon><SwitchButton /></el-icon>
@@ -71,31 +67,40 @@
         </template>
       </div>
     </div>
+    
+    <!-- 修改密码对话框 -->
+    <ChangePassword 
+      v-model="showChangePassword" 
+      @success="handlePasswordChangeSuccess"
+    />
   </header>
 </template>
 
 <script>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   ArrowDown, 
-  User, 
-  Setting, 
-  SwitchButton 
+  SwitchButton,
+  Lock 
 } from '@element-plus/icons-vue'
 import authStore from '../store/auth'
+import ChangePassword from '../components/ChangePassword.vue'
 
 export default {
   name: 'Header',
   components: {
     ArrowDown,
-    User,
-    Setting,
-    SwitchButton
+    SwitchButton,
+    Lock,
+    ChangePassword
   },
   setup() {
     const router = useRouter()
+    
+    // 响应式数据
+    const showChangePassword = ref(false)
     
     // 计算属性
     const isAuthenticated = computed(() => authStore.getters.isAuthenticated.value)
@@ -105,11 +110,8 @@ export default {
     // 处理用户操作
     const handleUserAction = async (command) => {
       switch (command) {
-        case 'profile':
-          ElMessage.info('个人资料功能开发中...')
-          break
-        case 'settings':
-          ElMessage.info('设置功能开发中...')
+        case 'change-password':
+          showChangePassword.value = true
           break
         case 'logout':
           try {
@@ -138,11 +140,19 @@ export default {
       }
     }
     
+    // 处理密码修改成功
+    const handlePasswordChangeSuccess = (result) => {
+      console.log('Header - 密码修改成功:', result)
+      // 不需要显示额外的成功提示，ChangePassword组件已经显示了
+    }
+    
     return {
       isAuthenticated,
       currentUser,
       userRole,
-      handleUserAction
+      showChangePassword,
+      handleUserAction,
+      handlePasswordChangeSuccess
     }
   }
 }
@@ -258,7 +268,24 @@ export default {
   flex-shrink: 0;
 }
 
+.user-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
 .username {
+  font-size: 12px;
+  font-weight: 400;
+  color: #909399;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.real-name {
   font-size: 14px;
   font-weight: 500;
   color: #303133;

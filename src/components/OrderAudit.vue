@@ -14,7 +14,7 @@
             <span class="value">{{ order.employeeName }}</span>
           </div>
           <div class="info-item">
-            <span class="label">客托人:</span>
+            <span class="label">委托人:</span>
             <span class="value">{{ order.customerName }}</span>
           </div>
           <div class="info-item">
@@ -53,17 +53,45 @@
       <div class="screenshots-section">
         <h4>工单截图</h4>
         <div class="screenshots-grid">
+          <!-- 派单截图 -->
+          <div class="screenshot-item">
+            <div class="screenshot-title">
+              <span>派单截图</span>
+              <el-tag size="small" type="primary">客服上传</el-tag>
+            </div>
+            <div class="screenshot-content">
+              <el-image
+                v-if="order.orderInfoScreenshotUrl"
+                :src="order.orderInfoScreenshotUrl"
+                :preview-src-list="[order.orderInfoScreenshotUrl]"
+                fit="cover"
+                class="screenshot-image"
+              >
+                <template #error>
+                  <div class="image-error">
+                    <el-icon><Picture /></el-icon>
+                    <span>图片加载失败</span>
+                  </div>
+                </template>
+              </el-image>
+              <div v-else class="no-screenshot">
+                <el-icon><Picture /></el-icon>
+                <span>暂无截图</span>
+              </div>
+            </div>
+          </div>
+
           <!-- 接单截图 -->
           <div class="screenshot-item">
             <div class="screenshot-title">
               <span>接单截图</span>
-              <el-tag size="small" type="info">必须</el-tag>
+              <el-tag size="small" type="info">员工上传</el-tag>
             </div>
             <div class="screenshot-content">
               <el-image
-                v-if="order.screenshots?.assignment"
-                :src="order.screenshots.assignment"
-                :preview-src-list="[order.screenshots.assignment]"
+                v-if="order.acceptanceScreenshotUrl"
+                :src="order.acceptanceScreenshotUrl"
+                :preview-src-list="[order.acceptanceScreenshotUrl]"
                 fit="cover"
                 class="screenshot-image"
               >
@@ -85,13 +113,13 @@
           <div class="screenshot-item">
             <div class="screenshot-title">
               <span>完成截图</span>
-              <el-tag size="small" type="success">必须</el-tag>
+              <el-tag size="small" type="success">员工上传</el-tag>
             </div>
             <div class="screenshot-content">
               <el-image
-                v-if="order.screenshots?.completion"
-                :src="order.screenshots.completion"
-                :preview-src-list="[order.screenshots.completion]"
+                v-if="order.completionScreenshotUrl"
+                :src="order.completionScreenshotUrl"
+                :preview-src-list="[order.completionScreenshotUrl]"
                 fit="cover"
                 class="screenshot-image"
               >
@@ -130,7 +158,7 @@
       </div>
 
       <!-- 审核操作区域 -->
-      <div class="audit-actions-section" v-if="order.status === 'pending_audit'">
+      <div class="audit-actions-section" v-if="order.status === 'PENDING_AUDIT' || order.status === 'REJECTED_TO_SUBMIT' || order.status === 'RESUBMITTING'">
         <h4>审核操作</h4>
         <div class="audit-form">
           <el-form
@@ -158,7 +186,7 @@
               :disabled="isAuditing"
             >
               <el-icon><Select /></el-icon>
-              同意
+              通过
             </el-button>
             <el-button
               type="danger"
@@ -181,8 +209,8 @@
             >
               <template #default>
                 <ul class="tips-list">
-                  <li><strong>同意：</strong>工单状态变为"已审核"，员工可以获得相应奖励</li>
-                  <li><strong>拒绝：</strong>工单状态变为"未通过"，员工需要重新提交截图</li>
+                  <li><strong>通过：</strong>工单状态变为"已完成"，员工可以获得相应奖励</li>
+                  <li><strong>拒绝：</strong>工单状态变为"未通过"，员工可以重新提交截图</li>
                   <li>请仔细检查截图内容是否符合要求后再进行审核操作</li>
                 </ul>
               </template>
@@ -192,12 +220,12 @@
       </div>
 
       <!-- 已审核状态显示 -->
-      <div class="audit-result-section" v-else-if="order.status !== 'pending_audit'">
+      <div class="audit-result-section" v-else-if="order.status !== 'PENDING_AUDIT' && order.status !== 'REJECTED_TO_SUBMIT' && order.status !== 'RESUBMITTING'">
         <h4>审核结果</h4>
         <div class="result-display">
           <el-result
-            :icon="order.status === 'approved' ? 'success' : 'error'"
-            :title="order.status === 'approved' ? '审核通过' : '审核未通过'"
+            :icon="order.status === 'COMPLETED' ? 'success' : 'error'"
+            :title="order.status === 'COMPLETED' ? '审核通过' : '审核未通过'"
             :sub-title="getResultSubtitle(order.status)"
           />
         </div>
@@ -251,18 +279,26 @@ export default {
     // 方法
     const getStatusTagType = (status) => {
       const statusMap = {
-        'pending_audit': 'warning',
-        'approved': 'success',
-        'rejected': 'danger'
+        'PENDING_ACCEPTANCE': 'info',
+        'IN_PROGRESS': 'primary',
+        'PENDING_AUDIT': 'warning',
+        'COMPLETED': 'success',
+        'REJECTED': 'danger',
+        'REJECTED_TO_SUBMIT': 'warning',
+        'RESUBMITTING': 'warning'
       }
       return statusMap[status] || 'info'
     }
     
     const getStatusText = (status) => {
       const statusMap = {
-        'pending_audit': '待审核',
-        'approved': '已审核',
-        'rejected': '未通过'
+        'PENDING_ACCEPTANCE': '待接单',
+        'IN_PROGRESS': '进行中',
+        'PENDING_AUDIT': '待审核',
+        'COMPLETED': '已完成',
+        'REJECTED': '未通过',
+        'REJECTED_TO_SUBMIT': '重新审核中',
+        'RESUBMITTING': '重新审核中'
       }
       return statusMap[status] || '未知'
     }
@@ -288,10 +324,12 @@ export default {
     }
     
     const getResultSubtitle = (status) => {
-      if (status === 'approved') {
+      if (status === 'COMPLETED') {
         return '工单已通过审核，员工可以获得相应奖励'
-      } else if (status === 'rejected') {
+      } else if (status === 'REJECTED') {
         return '工单未通过审核，员工需要重新提交截图'
+      } else if (status === 'REJECTED_TO_SUBMIT') {
+        return '员工正在重新提交工单，请等待审核'
       }
       return ''
     }
@@ -468,7 +506,7 @@ export default {
 
 .screenshots-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 20px;
 }
 
@@ -592,3 +630,5 @@ export default {
   }
 }
 </style>
+
+

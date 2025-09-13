@@ -11,11 +11,12 @@
           style="width: 140px; margin-right: 12px;"
         >
           <el-option label="全部" value="" />
-          <el-option label="待接单" value="pending" />
-          <el-option label="进行中" value="in_progress" />
-          <el-option label="待审核" value="pending_audit" />
-          <el-option label="已结单" value="completed" />
-          <el-option label="未通过" value="rejected" />
+          <el-option label="待接单" value="PENDING_ACCEPTANCE" />
+          <el-option label="进行中" value="IN_PROGRESS" />
+          <el-option label="待审核" value="PENDING_AUDIT" />
+          <el-option label="已完成" value="COMPLETED" />
+          <el-option label="未通过" value="REJECTED" />
+          <el-option label="重新审核中" value="REJECTED_TO_SUBMIT" />
         </el-select>
         <el-date-picker
           v-model="dateRange"
@@ -71,7 +72,7 @@
         />
         <el-table-column
           prop="customerName"
-          label="客托人"
+          label="委托人"
           width="100"
         />
         <el-table-column
@@ -126,7 +127,7 @@
           <template #default="scope">
             <!-- 待接单状态：上传接单截图 -->
             <el-button
-              v-if="scope.row.status === 'pending'"
+              v-if="scope.row.status === 'PENDING_ACCEPTANCE'"
               type="primary"
               size="small"
               @click="uploadAcceptScreenshot(scope.row)"
@@ -136,7 +137,7 @@
             
             <!-- 进行中状态：上传完成截图 -->
             <el-button
-              v-if="scope.row.status === 'in_progress'"
+              v-if="scope.row.status === 'IN_PROGRESS'"
               type="success"
               size="small"
               @click="uploadCompleteScreenshot(scope.row)"
@@ -144,8 +145,8 @@
               完成
             </el-button>
             
-            <!-- 已结单状态：选择是否续单 -->
-            <template v-if="scope.row.status === 'completed'">
+            <!-- 已完成状态：选择是否续单 -->
+            <template v-if="scope.row.status === 'COMPLETED'">
               <el-button
                 type="warning"
                 size="small"
@@ -161,9 +162,19 @@
               </el-button>
             </template>
             
+            <!-- 未通过状态：重新提交 -->
+            <el-button
+              v-if="scope.row.status === 'REJECTED'"
+              type="warning"
+              size="small"
+              @click="resubmitOrder(scope.row)"
+            >
+              重新提交
+            </el-button>
+            
             <!-- 其他状态：查看详情 -->
             <el-button
-              v-if="['pending_audit', 'rejected'].includes(scope.row.status)"
+              v-if="['PENDING_AUDIT', 'REJECTED_TO_SUBMIT', 'RESUBMITTING'].includes(scope.row.status)"
               size="small"
               @click="viewOrderDetail(scope.row)"
             >
@@ -218,7 +229,7 @@
         <el-form-item label="工单信息">
           <div class="order-info">
             <p>单号：{{ currentOrder?.orderNumber }}</p>
-            <p>客托人：{{ currentOrder?.customerName }}</p>
+            <p>委托人：{{ currentOrder?.customerName }}</p>
             <p>游戏类型：{{ currentOrder?.game }}</p>
             <p>服务类型：{{ currentOrder?.serviceType }}</p>
           </div>
@@ -262,7 +273,7 @@
         <el-form-item label="工单信息">
           <div class="order-info">
             <p>单号：{{ currentOrder?.orderNumber }}</p>
-            <p>客托人：{{ currentOrder?.customerName }}</p>
+            <p>委托人：{{ currentOrder?.customerName }}</p>
             <p>游戏类型：{{ currentOrder?.game }}</p>
             <p>服务类型：{{ currentOrder?.serviceType }}</p>
           </div>
@@ -305,7 +316,7 @@
       <div class="continue-order-content">
         <p>工单 {{ currentOrder?.orderNumber }} 已完成，是否需要续单？</p>
         <div class="order-summary">
-          <p>客托人：{{ currentOrder?.customerName }}</p>
+          <p>委托人：{{ currentOrder?.customerName }}</p>
           <p>游戏类型：{{ currentOrder?.game }}</p>
           <p>服务类型：{{ currentOrder?.serviceType }}</p>
         </div>
@@ -317,6 +328,51 @@
           @click="startContinueOrder"
         >
           续单
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 重新提交对话框 -->
+    <el-dialog
+      v-model="resubmitScreenshotVisible"
+      title="重新提交工单"
+      width="500px"
+    >
+      <el-form label-width="100px">
+        <el-form-item label="工单信息">
+          <div class="order-info">
+            <p>单号：{{ currentOrder?.orderNumber }}</p>
+            <p>委托人：{{ currentOrder?.customerName }}</p>
+            <p>游戏类型：{{ currentOrder?.game }}</p>
+            <p>服务类型：{{ currentOrder?.serviceType }}</p>
+          </div>
+        </el-form-item>
+        <el-form-item label="重新提交截图" required>
+          <el-upload
+            ref="resubmitUploadRef"
+            :auto-upload="false"
+            :limit="1"
+            accept="image/*"
+            :on-change="handleResubmitFileChange"
+          >
+            <el-button type="primary">选择图片</el-button>
+            <template #tip>
+              <div class="el-upload__tip">
+                只能上传jpg/png文件，且不超过2MB<br/>
+                <span style="color: #f56c6c;">注意：这是您的最后一次提交机会，请仔细检查截图内容</span>
+              </div>
+            </template>
+          </el-upload>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="resubmitScreenshotVisible = false">取消</el-button>
+        <el-button 
+          type="primary" 
+          @click="submitResubmitScreenshot"
+          :loading="isUploading"
+        >
+          重新提交
         </el-button>
       </template>
     </el-dialog>
@@ -368,12 +424,15 @@ export default {
     const acceptScreenshotVisible = ref(false)
     const completeScreenshotVisible = ref(false)
     const continueOrderVisible = ref(false)
+    const resubmitScreenshotVisible = ref(false)
     const currentOrder = ref(null)
     const isUploading = ref(false)
     const acceptUploadRef = ref(null)
     const completeUploadRef = ref(null)
+    const resubmitUploadRef = ref(null)
     const acceptFile = ref(null)
     const completeFile = ref(null)
+    const resubmitFile = ref(null)
     
     // 分页数据
     const pagination = reactive({
@@ -405,22 +464,26 @@ export default {
     // 方法
     const getStatusTagType = (status) => {
       const statusMap = {
-        'pending': 'info',
-        'in_progress': 'primary',
-        'pending_audit': 'warning',
-        'completed': 'success',
-        'rejected': 'danger'
+        'PENDING_ACCEPTANCE': 'info',
+        'IN_PROGRESS': 'primary',
+        'PENDING_AUDIT': 'warning',
+        'COMPLETED': 'success',
+        'REJECTED': 'danger',
+        'REJECTED_TO_SUBMIT': 'warning',
+        'RESUBMITTING': 'warning'
       }
       return statusMap[status] || 'info'
     }
     
     const getStatusText = (status) => {
       const statusMap = {
-        'pending': '待接单',
-        'in_progress': '进行中',
-        'pending_audit': '待审核',
-        'completed': '已结单',
-        'rejected': '未通过'
+        'PENDING_ACCEPTANCE': '待接单',
+        'IN_PROGRESS': '进行中',
+        'PENDING_AUDIT': '待审核',
+        'COMPLETED': '已完成',
+        'REJECTED': '未通过',
+        'REJECTED_TO_SUBMIT': '重新审核中',
+        'RESUBMITTING': '重新审核中'
       }
       return statusMap[status] || '未知'
     }
@@ -559,15 +622,31 @@ export default {
       
       isUploading.value = true
       try {
-        // 这里应该调用API上传文件并更新工单状态
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        // 调用上传API
+        const { uploadImage } = await import('../api/upload')
+        const uploadResult = await uploadImage(acceptFile.value)
         
-        ElMessage.success('接单成功，工单状态已更新为进行中')
-        acceptScreenshotVisible.value = false
-        loadWorkRecords()
-        emit('refresh')
+        if (!uploadResult.success) {
+          throw new Error(uploadResult.message || '图片上传失败')
+        }
+        
+        // 调用接单API，上传到acceptanceScreenshotUrl字段
+        const { acceptOrder } = await import('../api/employee')
+        const result = await acceptOrder(currentOrder.value.id, {
+          imageUrl: uploadResult.data.imageUrl  // 这将保存到acceptanceScreenshotUrl字段
+        })
+        
+        if (result.code === 200) {
+          ElMessage.success('接单成功，工单状态已更新为进行中')
+          acceptScreenshotVisible.value = false
+          loadWorkRecords()
+          emit('refresh')
+        } else {
+          throw new Error(result.message || '接单失败')
+        }
       } catch (error) {
         ElMessage.error('上传失败：' + error.message)
+        console.error('接单截图上传失败:', error)
       } finally {
         isUploading.value = false
         acceptFile.value = null
@@ -586,15 +665,31 @@ export default {
       
       isUploading.value = true
       try {
-        // 这里应该调用API上传文件并更新工单状态
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        // 调用上传API
+        const { uploadImage } = await import('../api/upload')
+        const uploadResult = await uploadImage(completeFile.value)
         
-        ElMessage.success('工单已提交审核')
-        completeScreenshotVisible.value = false
-        loadWorkRecords()
-        emit('refresh')
+        if (!uploadResult.success) {
+          throw new Error(uploadResult.message || '图片上传失败')
+        }
+        
+        // 调用完成订单API，上传到completionScreenshotUrl字段
+        const { completeOrder } = await import('../api/employee')
+        const result = await completeOrder(currentOrder.value.id, {
+          imageUrl: uploadResult.data.imageUrl  // 这将保存到completionScreenshotUrl字段
+        })
+        
+        if (result.code === 200) {
+          ElMessage.success('工单已提交审核')
+          completeScreenshotVisible.value = false
+          loadWorkRecords()
+          emit('refresh')
+        } else {
+          throw new Error(result.message || '完成订单失败')
+        }
       } catch (error) {
         ElMessage.error('上传失败：' + error.message)
+        console.error('完成截图上传失败:', error)
       } finally {
         isUploading.value = false
         completeFile.value = null
@@ -635,6 +730,60 @@ export default {
       }
     }
     
+    // 新增方法：重新提交工单
+    const resubmitOrder = (order) => {
+      currentOrder.value = order
+      resubmitScreenshotVisible.value = true
+    }
+    
+    // 新增方法：处理重新提交文件变化
+    const handleResubmitFileChange = (file) => {
+      resubmitFile.value = file
+    }
+    
+    // 新增方法：提交重新提交截图
+    const submitResubmitScreenshot = async () => {
+      if (!resubmitFile.value) {
+        ElMessage.warning('请选择重新提交的截图')
+        return
+      }
+      
+      isUploading.value = true
+      try {
+        // 调用上传API
+        const { uploadImage } = await import('../api/upload')
+        const uploadResult = await uploadImage(resubmitFile.value)
+        
+        if (!uploadResult.success) {
+          throw new Error(uploadResult.message || '图片上传失败')
+        }
+        
+        // 调用重新提交API
+        const { resubmitOrder: resubmitOrderAPI } = await import('../api/employee')
+        const result = await resubmitOrderAPI(currentOrder.value.id, {
+          imageUrl: uploadResult.data.imageUrl
+        })
+        
+        if (result.code === 200) {
+          ElMessage.success('重新提交成功，工单已进入审核状态')
+          resubmitScreenshotVisible.value = false
+          loadWorkRecords()
+          emit('refresh')
+        } else {
+          throw new Error(result.message || '重新提交失败')
+        }
+      } catch (error) {
+        ElMessage.error('重新提交失败：' + error.message)
+        console.error('重新提交失败:', error)
+      } finally {
+        isUploading.value = false
+        resubmitFile.value = null
+        if (resubmitUploadRef.value) {
+          resubmitUploadRef.value.clearFiles()
+        }
+      }
+    }
+    
     // 监听员工ID变化
     watch(() => props.employeeId, () => {
       if (props.employeeId) {
@@ -667,10 +816,12 @@ export default {
       acceptScreenshotVisible,
       completeScreenshotVisible,
       continueOrderVisible,
+      resubmitScreenshotVisible,
       currentOrder,
       isUploading,
       acceptUploadRef,
       completeUploadRef,
+      resubmitUploadRef,
       
       // Props
       userRole: computed(() => props.userRole),
@@ -698,10 +849,13 @@ export default {
       uploadAcceptScreenshot,
       uploadCompleteScreenshot,
       continueOrder,
+      resubmitOrder,
       handleAcceptFileChange,
       handleCompleteFileChange,
+      handleResubmitFileChange,
       submitAcceptScreenshot,
       submitCompleteScreenshot,
+      submitResubmitScreenshot,
       startContinueOrder,
       finishOrder
     }

@@ -1,12 +1,13 @@
 // 认证状态管理
 import { reactive, computed } from 'vue'
 import * as authAPI from '../api/auth'
+import { resetCancelToken } from '../api/http'
 
 // 创建响应式状态
 const state = reactive({
   user: null,
-  accessToken: localStorage.getItem('access_token'),
-  refreshToken: localStorage.getItem('refresh_token'),
+  accessToken: sessionStorage.getItem('accessToken'),
+  refreshToken: sessionStorage.getItem('refreshToken'),
   isLoading: false,
   error: null
 })
@@ -53,9 +54,9 @@ const actions = {
   setUser(user) {
     state.user = user
     if (user) {
-      localStorage.setItem('user_info', JSON.stringify(user))
+      sessionStorage.setItem('user_info', JSON.stringify(user))
     } else {
-      localStorage.removeItem('user_info')
+      sessionStorage.removeItem('user_info')
     }
   },
   
@@ -65,28 +66,28 @@ const actions = {
     state.refreshToken = refreshToken
     
     if (accessToken) {
-      localStorage.setItem('access_token', accessToken)
+      sessionStorage.setItem('accessToken', accessToken)
     } else {
-      localStorage.removeItem('access_token')
+      sessionStorage.removeItem('accessToken')
     }
     
     if (refreshToken) {
-      localStorage.setItem('refresh_token', refreshToken)
+      sessionStorage.setItem('refreshToken', refreshToken)
     } else {
-      localStorage.removeItem('refresh_token')
+      sessionStorage.removeItem('refreshToken')
     }
   },
   
-  // 初始化认证状态（从localStorage恢复）
+  // 初始化认证状态（从sessionStorage恢复）
   initAuth() {
     try {
-      const userInfo = localStorage.getItem('user_info')
+      const userInfo = sessionStorage.getItem('user_info')
       if (userInfo) {
         state.user = JSON.parse(userInfo)
       }
       
-      state.accessToken = localStorage.getItem('access_token')
-      state.refreshToken = localStorage.getItem('refresh_token')
+      state.accessToken = sessionStorage.getItem('accessToken')
+      state.refreshToken = sessionStorage.getItem('refreshToken')
     } catch (error) {
       console.error('初始化认证状态失败:', error)
       this.clearAuth()
@@ -101,12 +102,12 @@ const actions = {
       
       const response = await authAPI.login(loginData)
       
-      if (response.code === 200 && response.data) {
-        // 保存令牌
-        this.setTokens(response.data.access_token, response.data.refresh_token)
-        
-        // 保存用户信息
+      // 成功判定：兼容 code === 0 或 code === 200
+      const isSuccessCode = response && (response.code === 0 || response.code === 200)
+      if (isSuccessCode && response.data) {
+        // 先保存用户信息，再保存令牌，确保isAuthenticated状态正确
         this.setUser(response.data.user)
+        this.setTokens(response.data.accessToken, response.data.refreshToken)
         
         return {
           success: true,
@@ -114,13 +115,17 @@ const actions = {
           user: response.data.user
         }
       } else {
-        throw new Error(response.message || '登录失败')
+        // 登录失败，返回具体的错误信息
+        const errorMessage = response.message || '登录失败，请检查用户名和密码'
+        throw new Error(errorMessage)
       }
     } catch (error) {
-      this.setError(error.message || '登录失败，请稍后重试')
+      const apiMessage = error?.response?.data?.message
+      const message = apiMessage || error.message || '登录失败，请稍后重试'
+      this.setError(message)
       return {
         success: false,
-        message: error.message || '登录失败，请稍后重试'
+        message
       }
     } finally {
       this.setLoading(false)
@@ -135,11 +140,13 @@ const actions = {
       
       const response = await authAPI.register(registerData)
       
-      if (response.code === 200) {
+      // 成功判定：兼容 code === 0 或 code === 200
+      const isSuccessCode = response && (response.code === 0 || response.code === 200)
+      if (isSuccessCode) {
         return {
           success: true,
           message: response.message || '注册成功',
-          user: response.data?.user
+          user: response.data
         }
       } else {
         throw new Error(response.message || '注册失败')
@@ -160,14 +167,84 @@ const actions = {
     try {
       this.setLoading(true)
       
-      // 调用后端登出接口
-      await authAPI.logout()
-    } catch (error) {
-      console.error('登出API调用失败:', error)
-      // 即使API调用失败，也要清除本地状态
-    } finally {
-      // 清除本地认证状态
+      // 先清除本地认证状态，防止新的请求使用过期token
       this.clearAuth()
+      
+      // 然后调用后端登出接口（使用临时token）
+      const tempToken = sessionStorage.getItem('accessToken')
+      if (tempToken) {
+        try {
+          await authAPI.logout()
+        } catch (error) {
+          console.error('登出API调用失败:', error)
+          // 即使API调用失败，本地状态已经清除，不影响退出登录
+        }
+      }
+    } catch (error) {
+      console.error('登出过程发生错误:', error)
+      // 确保本地状态被清除
+      this.clearAuth()
+    } finally {
+      this.setLoading(false)
+    }
+  },
+  
+  // 修改密码
+  async changePassword(changePasswordData) {
+    try {
+      this.setLoading(true)
+      this.clearError()
+      
+      console.log('Auth Store - 开始修改密码')
+      const response = await authAPI.changePassword(changePasswordData)
+      
+      // 根据API文档，成功响应的code应该为0或200
+      if (response.code === 0 || response.code === 200) {
+        console.log('Auth Store - 密码修改成功:', {
+          code: response.code,
+          message: response.message,
+          timestamp: response.timestamp,
+          requestId: response.requestId
+        })
+        
+        return {
+          success: true,
+          message: response.message || '密码修改成功',
+          requestId: response.requestId
+        }
+      } else {
+        console.error('Auth Store - 密码修改失败:', response)
+        throw new Error(response.message || '密码修改失败')
+      }
+    } catch (error) {
+      console.error('Auth Store - 密码修改错误:', error)
+      
+      // 处理特定错误类型
+      let errorMessage = '密码修改失败，请稍后重试'
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      // 处理常见错误类型
+      if (errorMessage.includes('current password') || errorMessage.includes('当前密码')) {
+        errorMessage = '当前密码不正确'
+      } else if (errorMessage.includes('password mismatch') || errorMessage.includes('密码不匹配')) {
+        errorMessage = '新密码和确认密码不匹配'
+      } else if (errorMessage.includes('password strength') || errorMessage.includes('密码强度')) {
+        errorMessage = '新密码强度不足，请使用更强的密码'
+      } else if (errorMessage.includes('same password') || errorMessage.includes('相同密码')) {
+        errorMessage = '新密码不能与当前密码相同'
+      }
+      
+      this.setError(errorMessage)
+      return {
+        success: false,
+        message: errorMessage
+      }
+    } finally {
       this.setLoading(false)
     }
   },
@@ -179,35 +256,38 @@ const actions = {
     state.refreshToken = null
     state.error = null
     
-    // 清除localStorage
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
-    localStorage.removeItem('user_info')
+    // 清除sessionStorage
+    sessionStorage.removeItem('accessToken')
+    sessionStorage.removeItem('refreshToken')
+    sessionStorage.removeItem('user_info')
+    
+    // 取消所有正在进行的请求
+    resetCancelToken()
   },
   
-  // 刷新访问令牌
-  async refreshToken() {
-    try {
-      if (!state.refreshToken) {
-        throw new Error('没有刷新令牌')
-      }
-      
-      const response = await authAPI.refreshAccessToken(state.refreshToken)
-      
-      if (response.code === 200 && response.data) {
-        // 更新访问令牌
-        this.setTokens(response.data.access_token, state.refreshToken)
-        return true
-      } else {
-        throw new Error('令牌刷新失败')
-      }
-    } catch (error) {
-      console.error('刷新令牌失败:', error)
-      // 刷新失败，清除认证状态
-      this.clearAuth()
-      return false
-    }
-  },
+  // 刷新访问令牌 (暂时注释掉，等后端提供接口)
+  // async refreshToken() {
+  //   try {
+  //     if (!state.refreshToken) {
+  //       throw new Error('没有刷新令牌')
+  //     }
+  //     
+  //     const response = await authAPI.refreshAccessToken(state.refreshToken)
+  //     
+  //     if (response.code === 0 && response.data) {
+  //       // 更新访问令牌
+  //       this.setTokens(response.data.accessToken, state.refreshToken)
+  //       return true
+  //     } else {
+  //       throw new Error('令牌刷新失败')
+  //     }
+  //   } catch (error) {
+  //     console.error('刷新令牌失败:', error)
+  //     // 刷新失败，清除认证状态
+  //     this.clearAuth()
+  //     return false
+  //   }
+  // },
   
   // 获取当前用户信息
   async fetchCurrentUser() {
@@ -218,8 +298,10 @@ const actions = {
       
       const response = await authAPI.getCurrentUser()
       
-      if (response.code === 200 && response.data?.user) {
-        this.setUser(response.data.user)
+      // 成功判定：兼容 code === 0 或 code === 200
+      const isSuccessCode = response && (response.code === 0 || response.code === 200)
+      if (isSuccessCode && response.data) {
+        this.setUser(response.data)
         return true
       } else {
         throw new Error('获取用户信息失败')
@@ -238,23 +320,13 @@ const actions = {
   async checkUsername(username) {
     try {
       const response = await authAPI.checkUsernameAvailability(username)
-      return response.data?.available || false
+      return response.data || false
     } catch (error) {
       console.error('检查用户名可用性失败:', error)
       return false
     }
   },
   
-  // 检查邮箱可用性
-  async checkEmail(email) {
-    try {
-      const response = await authAPI.checkEmailAvailability(email)
-      return response.data?.available || false
-    } catch (error) {
-      console.error('检查邮箱可用性失败:', error)
-      return false
-    }
-  }
 }
 
 // 导出认证store

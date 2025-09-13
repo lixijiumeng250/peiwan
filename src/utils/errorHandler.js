@@ -25,6 +25,12 @@ class ErrorHandler {
   handle(error, context = {}) {
     console.error('🚨 错误处理:', error, context)
     
+    // 如果是认证取消错误，不处理
+    if (error.isAuthCancel) {
+      console.log('忽略认证取消错误')
+      return
+    }
+    
     // 防止错误频繁弹出
     if (this.shouldThrottle()) {
       return
@@ -236,6 +242,25 @@ export const handleError = (error, context) => {
   errorHandler.handle(error, context)
 }
 
+// 静默处理API错误（用于组件中的错误处理）
+export const handleApiError = (error, context = {}) => {
+  // 如果是认证取消错误，静默处理
+  if (error.isAuthCancel || (error.message && error.message.includes('用户未认证'))) {
+    console.log('静默处理认证错误:', error.message)
+    return false // 返回false表示错误已被静默处理
+  }
+  
+  // 如果是axios取消错误，静默处理
+  if (error.code === 'ERR_CANCELED' || error.message?.includes('canceled')) {
+    console.log('静默处理取消错误:', error.message)
+    return false
+  }
+  
+  // 其他错误正常处理
+  handleError(error, context)
+  return true // 返回true表示错误需要正常处理
+}
+
 // 导出错误处理器实例
 export default errorHandler
 
@@ -256,3 +281,5 @@ export const setupGlobalErrorHandler = (app) => {
     event.preventDefault()
   })
 }
+
+

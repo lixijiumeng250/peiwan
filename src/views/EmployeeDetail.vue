@@ -16,11 +16,12 @@
             :size="60"
             class="employee-avatar"
           >
-            {{ currentEmployee.name?.charAt(0) }}
+            {{ currentEmployee.realName?.charAt(0) || currentEmployee.username?.charAt(0)?.toUpperCase() }}
           </el-avatar>
           <div class="info-text">
-            <h2 class="employee-name">{{ currentEmployee.name }}</h2>
+            <h2 class="employee-name">{{ currentEmployee.username }}</h2>
             <div class="employee-meta">
+              <span class="realname-info">姓名: {{ currentEmployee.realName }}</span>
               <el-tag
                 :type="getStatusTagType(currentEmployee.status)"
                 size="small"
@@ -62,22 +63,20 @@
       >
         <!-- 个人状态标签页 -->
         <el-tab-pane label="个人状态" name="status">
-          <EmployeeStatus
-            :employee-id="employeeId"
+          <EmployeePersonalStatus
             :employee="currentEmployee"
             :user-role="userRole"
+            :game-skills-data="employeeGameSkills"
             @refresh="refreshEmployeeStatus"
           />
         </el-tab-pane>
 
         <!-- 工作记录标签页 -->
         <el-tab-pane label="工作记录" name="records">
-          <WorkRecords
+          <EmployeeWorkRecords
             :employee-id="employeeId"
             :employee="currentEmployee"
-            :user-role="userRole"
             @refresh="refreshWorkRecords"
-            @assign-order="showAssignOrderDialog"
           />
         </el-tab-pane>
       </el-tabs>
@@ -128,22 +127,24 @@
             <el-option label="炉石传说" value="炉石传说" />
           </el-select>
         </el-form-item>
+        <el-form-item label="陪玩类型" prop="playStyle">
+          <el-select
+            v-model="assignOrderData.playStyle"
+            placeholder="请选择陪玩类型"
+            style="width: 100%"
+          >
+            <el-option label="技术型" value="TECHNICAL" />
+            <el-option label="娱乐型" value="ENTERTAINMENT" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="服务类型" prop="serviceType">
           <el-select
             v-model="assignOrderData.serviceType"
-            placeholder="请选择或输入服务类型"
-            filterable
-            allow-create
-            default-first-option
+            placeholder="请选择服务类型"
             style="width: 100%"
           >
-            <el-option label="技术陪练" value="技术陪练" />
-            <el-option label="娱乐陪玩" value="娱乐陪玩" />
-            <el-option label="代练上分" value="代练上分" />
-            <el-option label="语音陪聊" value="语音陪聊" />
-            <el-option label="游戏教学" value="游戏教学" />
-            <el-option label="竞技陪练" value="竞技陪练" />
-            <el-option label="休闲娱乐" value="休闲娱乐" />
+            <el-option label="排位赛" value="RANKED" />
+            <el-option label="娱乐赛" value="CASUAL" />
           </el-select>
         </el-form-item>
         <el-form-item label="游戏水平" prop="gameLevel">
@@ -201,8 +202,11 @@ import {
 } from '@element-plus/icons-vue'
 import customerServiceStore from '../store/customerService'
 import authStore from '../store/auth'
-import EmployeeStatus from '../components/EmployeeStatus.vue'
-import WorkRecords from '../components/WorkRecords.vue'
+import { getGameSkillsByProfileId } from '../api/gameSkills'
+import { getCsEmployeeMappings } from '../api/csEmployeeMappings'
+import { getEmployeeProfile, getEmployees } from '../api/customerService'
+import EmployeePersonalStatus from '../components/EmployeePersonalStatus.vue'
+import EmployeeWorkRecords from '../components/EmployeeWorkRecords.vue'
 
 export default {
   name: 'EmployeeDetail',
@@ -211,8 +215,8 @@ export default {
     DocumentAdd,
     Refresh,
     Upload,
-    EmployeeStatus,
-    WorkRecords
+    EmployeePersonalStatus,
+    EmployeeWorkRecords
   },
   setup() {
     const route = useRoute()
@@ -226,6 +230,11 @@ export default {
     const assignOrderForm = ref(null)
     const uploadRef = ref(null)
     
+    // 员工详细信息
+    const employeeDetailInfo = ref(null)
+    const employeeGameSkills = ref([])
+    const isLoadingDetails = ref(false)
+    
     // 员工ID
     const employeeId = computed(() => parseInt(route.params.id))
     
@@ -235,6 +244,7 @@ export default {
       employeeName: '',
       customerName: '',
       game: '',
+      playStyle: '',
       serviceType: '',
       gameLevel: '',
       screenshotFile: null
@@ -247,6 +257,9 @@ export default {
       ],
       game: [
         { required: true, message: '请选择游戏类型', trigger: 'change' }
+      ],
+      playStyle: [
+        { required: true, message: '请选择陪玩类型', trigger: 'change' }
       ],
       serviceType: [
         { required: true, message: '请选择服务类型', trigger: 'change' }
@@ -270,8 +283,14 @@ export default {
     // 方法
     const getStatusTagType = (status) => {
       const statusMap = {
-        'working': 'success',
-        'idle': 'info',
+        'BUSY': 'warning',        // 工作中 - 黄色 (与其他页面一致)
+        'IDLE': 'success',        // 空闲中 - 绿色 (与其他页面一致)
+        'RESTING': 'primary',     // 休息中 - 蓝色 (与其他页面一致)
+        'OFF_DUTY': 'danger',     // 离岗 - 红色 (与其他页面一致)
+        // 兼容小写格式
+        'working': 'warning',
+        'idle': 'success',
+        'resting': 'primary',
         'offline': 'danger'
       }
       return statusMap[status] || 'info'
@@ -279,8 +298,14 @@ export default {
     
     const getStatusText = (status) => {
       const statusMap = {
+        'BUSY': '工作中',
+        'IDLE': '空闲中',
+        'RESTING': '休息中',
+        'OFF_DUTY': '离线',
+        // 兼容小写格式
         'working': '工作中',
         'idle': '空闲中',
+        'resting': '休息中',
         'offline': '离线'
       }
       return statusMap[status] || '未知'
@@ -316,8 +341,108 @@ export default {
         }
       }
       
+      // 加载员工详细信息
+      await loadEmployeeDetailInfo()
+      
       // 加载员工状态详情
       await refreshEmployeeStatus()
+    }
+    
+    // 加载员工详细信息
+    const loadEmployeeDetailInfo = async () => {
+      if (!employeeId.value) return
+      
+      try {
+        isLoadingDetails.value = true
+        
+        // 获取当前客服的用户ID
+        const currentUser = authStore.getters.currentUser.value
+        const csUserId = currentUser?.id
+        
+        if (!csUserId) {
+          ElMessage.error('无法获取当前用户信息')
+          return
+        }
+        
+        // 获取员工基本信息和详细信息
+        const [mappingsResponse, employeesResponse] = await Promise.all([
+          getCsEmployeeMappings(csUserId),
+          getEmployees()
+        ])
+        
+        // 获取员工的profile信息以获取profileId
+        const profileResponse = await getEmployeeProfile(employeeId.value)
+        let gameSkillsResponse = { code: 404, data: [] }
+        
+        if (profileResponse.code === 200 && profileResponse.data?.id) {
+          // 使用profileId获取游戏技能
+          gameSkillsResponse = await getGameSkillsByProfileId(profileResponse.data.id)
+        }
+        
+        // 处理员工基本信息
+        let employeeMapping = null
+        let employeeDetail = null
+        
+        // 从映射关系中获取用户名和真实姓名
+        if (mappingsResponse.code === 200 && mappingsResponse.data) {
+          employeeMapping = mappingsResponse.data.find(
+            mapping => mapping.employeeUserId === employeeId.value
+          )
+        }
+        
+        // 从员工列表中获取性别等详细信息
+        if (employeesResponse.code === 200 && employeesResponse.data) {
+          employeeDetail = employeesResponse.data.find(
+            emp => emp.id === employeeId.value
+          )
+        }
+        
+        // 整合员工信息
+        if (employeeMapping || employeeDetail) {
+          // 处理性别数据格式转换
+          let genderValue = 'male'
+          if (employeeDetail?.gender) {
+            genderValue = employeeDetail.gender.toLowerCase() === 'male' ? 'male' : 'female'
+          }
+          
+          const combinedEmployeeInfo = {
+            id: employeeId.value,
+            username: employeeMapping?.employeeUsername || currentEmployee.value?.username,
+            realName: employeeMapping?.employeeRealName || currentEmployee.value?.realName,
+            gender: genderValue,
+            // 其他基本信息保持从store获取
+            ...currentEmployee.value
+          }
+          
+          employeeDetailInfo.value = combinedEmployeeInfo
+          
+          // 更新store中的员工信息
+          const updatedEmployee = {
+            ...currentEmployee.value,
+            username: combinedEmployeeInfo.username,
+            realName: combinedEmployeeInfo.realName,
+            gender: combinedEmployeeInfo.gender
+          }
+          customerServiceStore.actions.setCurrentEmployee(updatedEmployee)
+        } else {
+          console.warn('未找到员工信息')
+        }
+        
+        // 处理游戏技能信息
+        if (gameSkillsResponse.code === 200 && gameSkillsResponse.data) {
+          employeeGameSkills.value = gameSkillsResponse.data
+        } else {
+          // 如果获取游戏技能失败，设置为空数组
+          employeeGameSkills.value = []
+          console.warn('获取员工游戏技能失败，将显示空列表')
+        }
+        
+      } catch (error) {
+        console.error('加载员工详细信息失败:', error)
+        ElMessage.error('加载员工详细信息失败')
+      } finally {
+        isLoadingDetails.value = false
+      }
     }
     
     const refreshData = async () => {
@@ -360,6 +485,7 @@ export default {
       assignOrderData.employeeName = currentEmployee.value.name
       assignOrderData.customerName = ''
       assignOrderData.game = ''
+      assignOrderData.playStyle = ''
       assignOrderData.serviceType = ''
       assignOrderData.gameLevel = ''
       assignOrderData.screenshotFile = null
@@ -398,6 +524,7 @@ export default {
           employeeId: assignOrderData.employeeId,
           customerName: assignOrderData.customerName,
           game: assignOrderData.game,
+          playStyle: assignOrderData.playStyle,
           serviceType: assignOrderData.serviceType,
           gameLevel: assignOrderData.gameLevel,
           screenshot: assignOrderData.screenshotFile
@@ -448,6 +575,9 @@ export default {
       employeeId,
       assignOrderData,
       assignOrderRules,
+      employeeDetailInfo,
+      employeeGameSkills,
+      isLoadingDetails,
       
       // 计算属性
       currentEmployee,
@@ -465,7 +595,8 @@ export default {
       handleScreenshotChange,
       removeScreenshot,
       handleAssignOrder,
-      handleCloseAssignDialog
+      handleCloseAssignDialog,
+      loadEmployeeDetailInfo
     }
   }
 }
@@ -473,7 +604,7 @@ export default {
 
 <style scoped>
 .employee-detail {
-  padding: 20px;
+  padding: 12px;
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -482,8 +613,8 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 20px;
+  margin-bottom: 12px;
+  padding: 12px;
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
@@ -522,6 +653,23 @@ export default {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+.username-info {
+  color: #606266;
+  font-size: 13px;
+  background: #f5f7fa;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.realname-info {
+  color: #606266;
+  font-size: 13px;
+  background: #f5f7fa;
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 .game-info {
@@ -552,7 +700,7 @@ export default {
 }
 
 .detail-tabs :deep(.el-tabs__content) {
-  padding: 20px;
+  padding: 12px;
 }
 
 .upload-preview {

@@ -1,172 +1,132 @@
 <template>
-  <div class="customer-service">
+  <div class="cs-employee-detail">
+    <!-- 页面头部 -->
     <div class="page-header">
-      <h1>客服管理页面</h1>
-      <div class="stats-bar">
-        <el-statistic
-          title="在线员工"
-          :value="onlineEmployeeCount"
-          suffix="人"
-          class="stat-item"
+      <div class="header-left">
+        <el-button
+          :icon="ArrowLeft"
+          @click="goBack"
+          class="back-btn"
         >
-          <template #prefix>
-            <el-icon><UserFilled /></el-icon>
-          </template>
-        </el-statistic>
-        <el-statistic
-          title="工作中"
-          :value="workingEmployeeCount"
-          suffix="人"
-          class="stat-item"
+          返回
+        </el-button>
+        <div class="employee-info" v-if="employeeInfo">
+          <el-avatar
+            :src="employeeInfo.avatar"
+            :size="60"
+            class="employee-avatar"
+          >
+            {{ employeeInfo.realName?.charAt(0) || employeeInfo.username?.charAt(0)?.toUpperCase() }}
+          </el-avatar>
+          <div class="info-text">
+            <h2 class="employee-name">{{ employeeInfo.username }}</h2>
+            <div class="employee-meta">
+              <span class="realname-info">姓名: {{ employeeInfo?.realName || '' }}</span>
+              <el-tag
+                :type="getStatusTagType(employeeInfo?.workStatus)"
+                size="small"
+              >
+                {{ getStatusText(employeeInfo?.workStatus) }}
+              </el-tag>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <!-- 管理员与客服均可见派单按钮 -->
+        <el-button
+          v-if="['CS','ADMIN'].includes(userRole?.toUpperCase())"
+          type="success"
+          :icon="DocumentAdd"
+          @click="showAssignOrderDialog"
+          :disabled="!employeeInfo || employeeInfo.workStatus === 'OFF_DUTY'"
         >
-          <template #prefix>
-            <el-icon><Clock /></el-icon>
-          </template>
-        </el-statistic>
-        <el-statistic
-          title="今日工单"
-          :value="todayOrderCount"
-          suffix="单"
-          class="stat-item"
-        >
-          <template #prefix>
-            <el-icon><DocumentChecked /></el-icon>
-          </template>
-        </el-statistic>
+          发派工单
+        </el-button>
       </div>
     </div>
 
     <!-- 主要内容区域 -->
-    <div class="main-content">
+    <div class="content-area">
       <el-tabs
         v-model="activeTab"
         type="card"
-        class="main-tabs"
+        class="detail-tabs"
       >
-        <!-- 员工列表标签页 -->
-        <el-tab-pane label="员工列表" name="employees">
-          <div class="employee-section">
-            <div class="section-header">
-              <h3>员工列表</h3>
-              <div class="filter-controls">
-                <el-select
-                  v-model="statusFilter"
-                  placeholder="筛选状态"
-                  clearable
-                  @change="handleStatusFilter"
-                  style="width: 120px; margin-right: 10px;"
-                >
-                  <el-option label="全部" value="" />
-                  <el-option label="工作中" value="BUSY" />
-                  <el-option label="空闲中" value="IDLE" />
-                  <el-option label="休息中" value="RESTING" />
-                  <el-option label="离线" value="OFF_DUTY" />
-                </el-select>
+        <!-- 基本信息标签页 -->
+        <el-tab-pane label="基本信息" name="info">
+          <div class="basic-info-section">
+            <!-- 基本信息 -->
+            <el-card class="info-card">
+              <template #header>
+                <h3>基本信息</h3>
+              </template>
+              <div class="basic-info">
+                <div class="info-item">
+                  <label>用户名:</label>
+                  <span>{{ employeeInfo?.username || '' }}</span>
+                </div>
+                <div class="info-item">
+                  <label>真实姓名:</label>
+                  <span>{{ employeeInfo?.realName || '' }}</span>
+                </div>
+                <div class="info-item">
+                  <label>性别:</label>
+                  <span>{{ getGenderText(employeeInfo?.gender) }}</span>
+                </div>
               </div>
-            </div>
+            </el-card>
 
-      <!-- 员工卡片网格 -->
-      <div class="employee-grid" v-loading="isLoading('employees') || isInitializing">
-        <!-- 初始化加载状态 -->
-        <template v-if="isInitializing">
-          <div v-for="n in 6" :key="n" class="employee-card-skeleton">
-            <el-skeleton animated>
-              <template #template>
-                <div class="skeleton-header">
-                  <el-skeleton-item variant="circle" style="width: 50px; height: 50px;" />
-                  <div class="skeleton-info">
-                    <el-skeleton-item variant="text" style="width: 80px; margin-bottom: 8px;" />
-                    <el-skeleton-item variant="text" style="width: 60px;" />
+            <!-- 游戏技能 -->
+            <el-card class="skills-card">
+              <template #header>
+                <h3>擅长游戏</h3>
+              </template>
+              
+              <div v-loading="skillsLoading">
+                <!-- 技能列表 -->
+                <div v-if="gameSkills.length > 0" class="skills-grid">
+                  <div v-for="skill in gameSkills" :key="skill.id" class="skill-card">
+                    <div class="skill-header">
+                      <h4>{{ skill.gameName }}</h4>
+                    </div>
+                    <div class="skill-content">
+                      <div class="skill-item">
+                        <span class="label">陪玩类型:</span>
+                        <span class="value">{{ getPlayStyleLabel(skill.playStyle) }}</span>
+                      </div>
+                      <div class="skill-item">
+                        <span class="label">服务类型:</span>
+                        <span class="value">{{ getServiceTypeLabel(skill.serviceType) }}</span>
+                      </div>
+                      <div class="skill-item" v-if="skill.highestRank">
+                        <span class="label">最高段位:</span>
+                        <span class="value">{{ skill.highestRank }}</span>
+                      </div>
+                      <div class="skill-item">
+                        <span class="label">创建时间:</span>
+                        <span class="value">{{ formatDate(skill.createdAt) }}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div class="skeleton-body">
-                  <el-skeleton-item variant="text" style="width: 100%; margin-bottom: 8px;" />
+                
+                <!-- 空状态 -->
+                <div v-else class="empty-state">
+                  <el-empty description="该员工暂无游戏技能" />
                 </div>
-                <div class="skeleton-footer">
-                  <el-skeleton-item variant="button" style="width: 60px; height: 24px; margin-right: 8px;" />
-                  <el-skeleton-item variant="button" style="width: 60px; height: 24px;" />
-                </div>
-              </template>
-            </el-skeleton>
-          </div>
-        </template>
-        
-        <!-- 正常显示员工卡片 -->
-        <template v-else>
-          <div
-            v-for="employee in filteredEmployees"
-            :key="employee.id"
-            class="employee-card"
-            @click="viewEmployeeDetail(employee)"
-          >
-          <div class="card-header">
-            <el-avatar
-              :src="employee.avatar"
-              :size="45"
-              class="employee-avatar"
-            >
-              {{ (employee.employeeUsername || employee.username || employee.name || 'U').charAt(0).toUpperCase() }}
-            </el-avatar>
-            <div class="employee-info">
-              <h4 class="employee-name">{{ employee.employeeUsername || employee.username || employee.name }}</h4>
-              <div class="employee-meta">
-                <span class="realname-info">姓名: {{ employee.employeeRealName || employee.realName || employee.name }}</span>
-                <el-tag
-                  :type="getStatusTagType(employee.workStatus)"
-                  size="small"
-                  class="status-tag"
-                >
-                  {{ getStatusText(employee.workStatus) }}
-                </el-tag>
               </div>
-            </div>
-          </div>
-
-          <div class="card-body">
-            <div class="info-row">
-              <span class="label">性别:</span>
-              <span class="value">{{ getGenderText(employee.gender) }}</span>
-            </div>
-          </div>
-
-          <div class="card-footer">
-            <el-button
-              type="primary"
-              size="small"
-              @click.stop="viewEmployeeDetail(employee)"
-            >
-              查看详情
-            </el-button>
-            <el-button
-              type="success"
-              size="small"
-              @click.stop="showAssignOrderDialog(employee)"
-              :disabled="employee.workStatus === 'OFF_DUTY'"
-            >
-              发派工单
-            </el-button>
-          </div>
-        </div>
-        </template>
-      </div>
-
-            <!-- 空状态 -->
-            <el-empty
-              v-if="!isLoading('employees') && !isInitializing && employees.length === 0"
-              description="暂无员工数据"
-            />
+            </el-card>
           </div>
         </el-tab-pane>
 
-        <!-- 所有工单标签页 -->
-        <el-tab-pane label="所有工单" name="orders">
-          <div class="orders-section">
-            <EmployeeWorkRecords
-              :employee-id="null"
-              :employee="null"
-              @refresh="refreshOrders"
-            />
-          </div>
+        <!-- 工作记录标签页 -->
+        <el-tab-pane label="工作记录" name="records">
+          <EmployeeWorkRecords
+            :employee-id="employeeId"
+            :employee="employeeInfo"
+            @refresh="refreshWorkRecords"
+          />
         </el-tab-pane>
       </el-tabs>
     </div>
@@ -326,19 +286,17 @@
         </el-button>
       </template>
     </el-dialog>
-
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onActivated, watch, reactive, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { handleApiError } from '../utils/errorHandler'
 import {
-  UserFilled,
-  Clock,
-  DocumentChecked,
+  ArrowLeft,
+  DocumentAdd,
   Refresh,
   Upload,
   Plus,
@@ -346,44 +304,45 @@ import {
   Delete
 } from '@element-plus/icons-vue'
 import customerServiceStore from '../store/customerService'
-import authStore from '../store/auth'
-import * as csEmployeeMappingsAPI from '../api/csEmployeeMappings'
-import * as customerServiceAPI from '../api/customerService'
 import { showImagePreview } from '../utils/imageViewer'
 import { uploadImage, validateImageFile } from '../api/upload'
-import { usePolling, POLLING_CONFIG } from '../utils/polling'
+import { getEmployeeGameSkillsForCS } from '../api/employee'
+import authStore from '../store/auth'
 import EmployeeWorkRecords from '../components/EmployeeWorkRecords.vue'
 
-// 包装上传函数以保持一致性
-const uploadOrderInfoScreenshot = uploadImage
-
 export default {
-  name: 'CustomerService',
+  name: 'CSEmployeeDetail',
   components: {
-    UserFilled,
-    Clock,
-    DocumentChecked,
+    ArrowLeft,
+    DocumentAdd,
     Refresh,
     Upload,
     Plus,
     EmployeeWorkRecords
   },
   setup() {
+    const route = useRoute()
     const router = useRouter()
-    
-    // 轮询管理
-    const { startPolling, stopPolling, startSmartPolling } = usePolling()
+    // 用户角色（用于控制是否显示派单按钮）
+    const userRole = computed(() => authStore.getters.userRole.value)
     
     // 响应式数据
-    const activeTab = ref('employees')
-    const statusFilter = ref('')
+    const activeTab = ref('info')
+    const isRefreshing = ref(false)
+    const skillsLoading = ref(false)
     const assignOrderVisible = ref(false)
     const submitting = ref(false)
     const assignOrderForm = ref(null)
     const uploadRef = ref(null)
     const uploadArea = ref(null)
     const isDragOver = ref(false)
-    const isInitializing = ref(true)
+    
+    // 员工信息
+    const employeeInfo = ref(null)
+    const gameSkills = ref([])
+    
+    // 员工ID
+    const employeeId = computed(() => parseInt(route.params.id))
     
     // 发派工单表单数据
     const assignOrderData = reactive({
@@ -400,36 +359,21 @@ export default {
     
     // 表单验证规则
     const assignOrderRules = {
-      // 当有截图时，其他字段变为可选
+      // 所有字段都为可选
     }
-    
-    // 计算属性 - 直接使用 store 的 getter
-    const employees = customerServiceStore.getters.employeeList
-    const isLoading = customerServiceStore.getters.isLoading
-    const onlineEmployeeCount = customerServiceStore.getters.onlineEmployeeCount
-    const workingEmployeeCount = customerServiceStore.getters.workingEmployeeCount
-    
-    // 筛选后的员工列表
-    const filteredEmployees = computed(() => {
-      const filtered = !statusFilter.value 
-        ? employees.value 
-        : employees.value.filter(emp => emp.workStatus === statusFilter.value)
-      console.log('筛选后的员工列表:', filtered, '筛选条件:', statusFilter.value)
-      return filtered
-    })
-    
-    // 今日工单总数
-    const todayOrderCount = computed(() => {
-      return employees.value.reduce((total, emp) => total + (emp.todayOrders || 0), 0)
-    })
     
     // 方法
     const getStatusTagType = (status) => {
       const statusMap = {
-        'BUSY': 'warning',        // 工作中 - 黄色
-        'IDLE': 'success',        // 空闲中 - 绿色  
-        'RESTING': 'primary',     // 休息中 - 蓝色
-        'OFF_DUTY': 'danger'      // 离岗 - 红色
+        'BUSY': 'warning',        // 工作中 - 黄色 (与其他页面一致)
+        'IDLE': 'success',        // 空闲中 - 绿色 (与其他页面一致)
+        'RESTING': 'primary',     // 休息中 - 蓝色 (与其他页面一致)
+        'OFF_DUTY': 'danger',     // 离岗 - 红色 (与其他页面一致)
+        // 兼容小写格式
+        'working': 'warning',
+        'idle': 'success',
+        'resting': 'primary',
+        'offline': 'danger'
       }
       return statusMap[status] || 'info'
     }
@@ -439,25 +383,22 @@ export default {
         'BUSY': '工作中',
         'IDLE': '空闲中',
         'RESTING': '休息中',
-        'OFF_DUTY': '离线'
+        'OFF_DUTY': '离线',
+        // 兼容小写格式
+        'working': '工作中',
+        'idle': '空闲中',
+        'resting': '休息中',
+        'offline': '离线'
       }
       return statusMap[status] || '未知'
     }
-    
-    const getGenderText = (gender) => {
-      const genderMap = {
-        'MALE': '男',
-        'FEMALE': '女'
-      }
-      return genderMap[gender] || ''
-    }
 
-    const getSkillTagType = (playStyle) => {
-      const typeMap = {
-        'TECHNICAL': 'success',
-        'ENTERTAINMENT': 'warning'
-      }
-      return typeMap[playStyle] || 'info'
+    const getGenderText = (gender) => {
+      if (gender === 'male') return '男'
+      if (gender === 'female') return '女'
+      if (gender === 'MALE') return '男'
+      if (gender === 'FEMALE') return '女'
+      return ''
     }
 
     const getPlayStyleLabel = (style) => {
@@ -468,60 +409,161 @@ export default {
       return map[style] || style
     }
     
-
-    const handleStatusFilter = () => {
-      // 状态筛选逻辑已通过计算属性实现
+    const getServiceTypeLabel = (type) => {
+      const map = {
+        'RANKED': '排位赛',
+        'CASUAL': '娱乐赛'
+      }
+      return map[type] || type
     }
     
-
-    const initializeData = async () => {
+    const formatDate = (dateStr) => {
+      if (!dateStr) return ''
+      return new Date(dateStr).toLocaleString()
+    }
+    
+    const goBack = () => {
+      // 管理员从管理员页面进入时返回管理员页，其它角色返回客服页
+      const role = userRole.value?.toUpperCase()
+      if (role === 'ADMIN') {
+        router.push({ name: 'Admin' })
+      } else {
+        router.push({ name: 'CustomerService' })
+      }
+    }
+    
+    // 加载员工基本信息
+    const loadEmployeeInfo = async () => {
       try {
-        // 确保用户信息已加载
-        const currentUser = authStore.getters.currentUser.value
-        if (!currentUser) {
-          await authStore.actions.fetchCurrentUser()
+        // 首先尝试从store中获取员工信息
+        const currentEmployee = customerServiceStore.getters.currentEmployee.value
+        
+        if (currentEmployee && currentEmployee.id === employeeId.value) {
+          // 如果store中有当前员工信息，直接使用
+          employeeInfo.value = {
+            id: currentEmployee.id,
+            userId: currentEmployee.csEmployeeUserId || currentEmployee.employeeUserId || currentEmployee.id, // 使用CS API返回的userId
+            username: currentEmployee.username || currentEmployee.employeeUsername,
+            realName: currentEmployee.realName || currentEmployee.employeeRealName || currentEmployee.name,
+            gender: currentEmployee.gender,
+            workStatus: currentEmployee.workStatus,
+            game: currentEmployee.game,
+            todayOrders: currentEmployee.todayOrders || 0,
+            totalOrders: currentEmployee.totalOrders || 0,
+            rating: currentEmployee.rating || 0,
+            avatar: currentEmployee.avatar
+          }
+          console.log('从store获取员工信息:', employeeInfo.value)
+        } else {
+          // 如果store中没有信息，先刷新员工列表
+          const result = await customerServiceStore.actions.fetchEmployees()
+          
+          if (result.success) {
+            // 从刷新后的员工列表中找到当前员工
+            const employees = customerServiceStore.getters.employeeList.value
+            const employee = employees.find(emp => emp.id === employeeId.value)
+            
+            if (employee) {
+              employeeInfo.value = {
+                id: employee.id,
+                userId: employee.csEmployeeUserId || employee.employeeUserId || employee.id, // 使用CS API返回的userId
+                username: employee.username || employee.employeeUsername,
+                realName: employee.realName || employee.employeeRealName || employee.name,
+                gender: employee.gender,
+                workStatus: employee.workStatus,
+                game: employee.game,
+                todayOrders: employee.todayOrders || 0,
+                totalOrders: employee.totalOrders || 0,
+                rating: employee.rating || 0,
+                avatar: employee.avatar
+              }
+              console.log('从员工列表获取员工信息:', employeeInfo.value)
+            } else {
+              ElMessage.error('员工不存在')
+              goBack()
+              return
+            }
+          } else {
+            ElMessage.error('获取员工信息失败')
+            goBack()
+            return
+          }
+        }
+      } catch (error) {
+        console.error('加载员工信息失败:', error)
+        const shouldShowError = handleApiError(error, { component: 'CSEmployeeDetail', action: 'loadEmployeeInfo' })
+        if (shouldShowError) {
+          ElMessage.error('加载员工信息失败')
+        }
+      }
+    }
+    
+    // 加载游戏技能 - 使用客服专用接口获取员工游戏技能
+    const loadGameSkills = async () => {
+      try {
+        skillsLoading.value = true
+        
+        if (!employeeInfo.value?.userId) {
+          console.log('员工userId不存在，无法获取游戏技能')
+          gameSkills.value = []
+          return
         }
         
-        // 加载员工列表数据
-        await refreshEmployeeList()
+        // 使用客服专用接口，设置X-User-Id为员工的userId（来自/api/cs/employees接口）
+        console.log('准备获取游戏技能，员工userId:', employeeInfo.value.userId)
+        const response = await getEmployeeGameSkillsForCS(employeeInfo.value.userId)
+        
+        if (response.code === 200 && response.data) {
+          gameSkills.value = response.data
+          console.log('成功获取员工游戏技能:', response.data)
+        } else {
+          gameSkills.value = []
+          console.log('获取游戏技能响应为空或失败:', response)
+        }
       } catch (error) {
-        console.error('初始化数据失败:', error)
+        console.error('加载游戏技能失败:', error)
+        gameSkills.value = []
+        // 不显示错误消息，因为游戏技能可能为空是正常的
       } finally {
-        isInitializing.value = false
+        skillsLoading.value = false
       }
     }
-
-    const refreshEmployeeList = async () => {
-      console.log('开始刷新员工列表...')
-      const result = await customerServiceStore.actions.fetchEmployees()
-      console.log('刷新员工列表结果:', result)
+    
+    const refreshData = async () => {
+      isRefreshing.value = true
+      try {
+        // 先加载员工信息，再加载游戏技能
+        await loadEmployeeInfo()
+        await loadGameSkills()
+        ElMessage.success('数据刷新成功')
+      } catch (error) {
+        ElMessage.error('数据刷新失败')
+      } finally {
+        isRefreshing.value = false
+      }
+    }
+    
+    const refreshWorkRecords = async () => {
+      if (!employeeId.value) return
+      
+      const result = await customerServiceStore.actions.fetchWorkRecords(employeeId.value)
       if (!result.success) {
         ElMessage.error(result.message)
-      } else {
-        console.log('员工列表刷新成功，员工数量:', result.data?.length || 0)
       }
     }
     
-    const viewEmployeeDetail = (employee) => {
-      // 设置当前员工到store中
-      customerServiceStore.actions.setCurrentEmployee(employee)
+    const showAssignOrderDialog = () => {
+      if (!employeeInfo.value) return
       
-      // 跳转到客服专用的员工详情页面
-      router.push({
-        name: 'CSEmployeeDetail',
-        params: { id: employee.id }
-      })
-    }
-    
-    const showAssignOrderDialog = (employee) => {
-      assignOrderData.employeeId = employee.id
-      assignOrderData.employeeName = employee.name
+      assignOrderData.employeeId = employeeInfo.value.id
+      assignOrderData.employeeName = employeeInfo.value.realName || employeeInfo.value.username
       assignOrderData.customerName = ''
       assignOrderData.game = ''
       assignOrderData.playStyle = ''
       assignOrderData.serviceType = ''
       assignOrderData.gameLevel = ''
       assignOrderData.screenshotFile = null
+      assignOrderData.screenshotUrl = null
       assignOrderVisible.value = true
     }
     
@@ -640,7 +682,7 @@ export default {
         // 先上传截图（如果有）
         let screenshotUrl = null
         if (assignOrderData.screenshotFile) {
-          const uploadResult = await uploadOrderInfoScreenshot(assignOrderData.screenshotFile)
+          const uploadResult = await uploadImage(assignOrderData.screenshotFile)
           screenshotUrl = uploadResult.data
         }
         
@@ -659,16 +701,18 @@ export default {
         if (result.success) {
           ElMessage.success(result.message)
           assignOrderVisible.value = false
-          // 刷新员工列表以更新工单数量
-          await refreshEmployeeList()
-          // 刷新工单列表以显示最新工单
-          await refreshOrders()
+          // 刷新工作记录
+          if (activeTab.value === 'records') {
+            await refreshWorkRecords()
+          }
+          // 刷新员工信息
+          await loadEmployeeInfo()
         } else {
           ElMessage.error(result.message)
         }
       } catch (error) {
         console.error('发派工单失败:', error)
-        const shouldShowError = handleApiError(error, { component: 'CustomerService', action: 'assignOrder' })
+        const shouldShowError = handleApiError(error, { component: 'CSEmployeeDetail', action: 'assignOrder' })
         if (shouldShowError) {
           ElMessage.error('发派工单失败：' + error.message)
         }
@@ -687,166 +731,63 @@ export default {
       }
     }
     
-    const refreshOrders = async () => {
-      const result = await customerServiceStore.actions.fetchDispatchedOrders()
-      if (!result.success) {
-        ElMessage.error(result.message)
+    // 监听路由参数变化
+    watch(() => route.params.id, async (newId, oldId) => {
+      console.log(`员工详情页面ID变化: ${oldId} -> ${newId}`)
+      if (newId !== oldId && newId) {
+        await nextTick()
+        setTimeout(async () => {
+          await loadEmployeeInfo()
+          await loadGameSkills()
+        }, 100)
       }
-    }
-    
-    // 开始轮询员工列表
-    const startPollingEmployees = () => {
-      const interval = POLLING_CONFIG.CS_EMPLOYEES * 1000
-      
-      // 使用智能轮询，只有数据变化时才更新UI
-      startSmartPolling(
-        'cs-employees',
-        // 数据获取函数 - 获取完整的员工数据包括状态信息
-        async () => {
-          console.log('轮询获取完整员工数据...')
-          
-          // 获取当前用户ID
-          const userInfo = sessionStorage.getItem('user_info')
-          if (!userInfo) {
-            throw new Error('用户信息不存在')
-          }
-          
-          const user = JSON.parse(userInfo)
-          const csUserId = user.id
-          
-          if (!csUserId) {
-            throw new Error('无法获取客服用户ID')
-          }
-          
-          // 1. 获取员工关系数据
-          const mappingsResponse = await csEmployeeMappingsAPI.getCsEmployeeMappings(csUserId)
-          
-          let mappingsData = []
-          if (mappingsResponse.code === 200 && mappingsResponse.data) {
-            mappingsData = mappingsResponse.data
-          } else if (Array.isArray(mappingsResponse)) {
-            mappingsData = mappingsResponse
-          } else if (mappingsResponse.data && Array.isArray(mappingsResponse.data)) {
-            mappingsData = mappingsResponse.data
-          }
-          
-          // 2. 获取员工详细状态信息（一次性获取所有员工数据，提高效率）
-          let employeeDetails = []
-          try {
-            const employeeResponse = await customerServiceAPI.getEmployees()
-            if (employeeResponse.code === 200 && Array.isArray(employeeResponse.data)) {
-              employeeDetails = employeeResponse.data
-            }
-          } catch (error) {
-            console.warn('获取员工详细信息失败:', error)
-          }
-          
-          // 3. 合并员工关系数据和详细状态信息
-          const employeeDataList = mappingsData.map(mapping => {
-            // 从员工详细信息中找到对应的员工
-            const employeeDetail = employeeDetails.find(emp => 
-              emp.id === mapping.employeeUserId || 
-              emp.userId === mapping.employeeUserId
-            )
-            
-            return {
-              id: mapping.employeeUserId || mapping.employeeId || 0,
-              name: mapping.employeeRealName || mapping.employeeUsername || '未知员工',
-              workStatus: employeeDetail?.workStatus || employeeDetail?.status || 'OFF_DUTY',
-              gender: employeeDetail?.gender || 'MALE',
-              game: employeeDetail?.game || '未设置',
-              level: employeeDetail?.level || '未设置',
-              todayOrders: employeeDetail?.todayOrders || 0,
-              totalOrders: employeeDetail?.totalOrders || 0,
-              rating: employeeDetail?.rating || 0,
-              avatar: employeeDetail?.avatar || '',
-              // 保留关系信息
-              mappingId: mapping.id,
-              csUserId: mapping.csUserId,
-              employeeUserId: mapping.employeeUserId,
-              employeeUsername: mapping.employeeUsername,
-              employeeRealName: mapping.employeeRealName,
-              createdAt: mapping.createdAt,
-              updatedAt: mapping.updatedAt
-            }
-          })
-          console.log('轮询获取到的完整员工数据:', employeeDataList)
-          
-          return employeeDataList
-        },
-        // 数据变化时的回调 - 只有在检测到变化时才更新store
-        (newData, oldData, changes) => {
-          console.log('检测到员工列表数据变化，更新store')
-          if (changes && changes.length > 0) {
-            console.log('员工变化详情:', changes)
-            // 只在有实际变化时显示通知，避免过多提示
-            if (changes.length <= 3) {
-              ElMessage.info(`员工数据已更新`)
-            }
-          }
-          
-          // 只有在检测到变化时才更新store
-          customerServiceStore.actions.updateEmployeeListFromPolling(newData)
-        },
-        interval
-      )
-      
-      console.log(`开始智能轮询员工列表，间隔: ${POLLING_CONFIG.CS_EMPLOYEES}秒`)
-    }
-    
-    // 停止轮询员工列表
-    const stopPollingEmployees = () => {
-      stopPolling('cs-employees')
-      console.log('停止轮询员工列表')
-    }
-    
-    
+    }, { immediate: false })
+
     // 生命周期
-    onMounted(() => {
-      initializeData()
-      
-      // 延迟开始轮询，避免与初始加载冲突
-      setTimeout(() => {
-        startPollingEmployees()
-      }, 5000) // 延迟5秒，确保初始化完成
+    onMounted(async () => {
+      console.log('CSEmployeeDetail onMounted, employeeId:', employeeId.value)
+      await nextTick()
+      setTimeout(async () => {
+        await loadEmployeeInfo()
+        await loadGameSkills()
+      }, 50)
     })
-    
-    onUnmounted(() => {
-      stopPollingEmployees()
+
+    // 组件激活时刷新数据（用于keep-alive场景）
+    onActivated(async () => {
+      console.log('CSEmployeeDetail onActivated, employeeId:', employeeId.value)
+      await nextTick()
+      await loadEmployeeInfo()
+      await loadGameSkills()
     })
     
     return {
       // 响应式数据
       activeTab,
-      statusFilter,
+      isRefreshing,
+      skillsLoading,
       assignOrderVisible,
       submitting,
       assignOrderForm,
       uploadRef,
       uploadArea,
       isDragOver,
-      isInitializing,
+      employeeId,
+      employeeInfo,
+      gameSkills,
       assignOrderData,
       assignOrderRules,
-      
-      // 计算属性
-      employees,
-      filteredEmployees,
-      isLoading,
-      onlineEmployeeCount,
-      workingEmployeeCount,
-      todayOrderCount,
       
       // 方法
       getStatusTagType,
       getStatusText,
       getGenderText,
-      getSkillTagType,
       getPlayStyleLabel,
-      handleStatusFilter,
-      initializeData,
-      refreshEmployeeList,
-      viewEmployeeDetail,
+      getServiceTypeLabel,
+      formatDate,
+      goBack,
+      refreshData,
+      refreshWorkRecords,
       showAssignOrderDialog,
       handleScreenshotChange,
       removeScreenshot,
@@ -860,16 +801,14 @@ export default {
       handleMouseLeave,
       handleAssignOrder,
       handleCloseAssignDialog,
-      refreshOrders,
-      startPollingEmployees,
-      stopPollingEmployees
+      userRole
     }
   }
 }
 </script>
 
 <style scoped>
-.customer-service {
+.cs-employee-detail {
   padding: 12px;
   max-width: 1400px;
   margin: 0 auto;
@@ -879,146 +818,38 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   padding: 12px;
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
-.page-header h1 {
-  margin: 0;
-  color: #303133;
-  font-size: 28px;
-}
-
-.stats-bar {
-  display: flex;
-  gap: 40px;
-}
-
-.stat-item {
-  text-align: center;
-}
-
-.main-content {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
-
-.main-tabs {
-  min-height: 600px;
-}
-
-.main-tabs :deep(.el-tabs__header) {
-  margin: 0;
-  background: #f5f7fa;
-  padding: 0 12px;
-}
-
-.main-tabs :deep(.el-tabs__content) {
-  padding: 12px;
-}
-
-.employee-section {
-  padding: 0;
-}
-
-.orders-section {
-  padding: 0;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.section-header h3 {
-  margin: 0;
-  color: #303133;
-  font-size: 18px;
-}
-
-.filter-controls {
+.header-left {
   display: flex;
   align-items: center;
+  gap: 20px;
 }
 
-.employee-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-  min-height: 200px;
-}
-
-.employee-card {
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
-  padding: 16px 16px 0 16px;
-  background: #fff;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  flex-direction: column;
-}
-
-.employee-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-
-/* 骨架屏样式 */
-.employee-card-skeleton {
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
-  padding: 16px;
-  background: #fff;
-  min-height: 120px;
-}
-
-.skeleton-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.skeleton-info {
-  margin-left: 12px;
-  flex: 1;
-}
-
-.skeleton-body {
-  margin-bottom: 12px;
-}
-
-.skeleton-footer {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.employee-avatar {
-  margin-right: 12px;
+.back-btn {
+  margin-right: 10px;
 }
 
 .employee-info {
-  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.info-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .employee-name {
-  margin: 0 0 4px 0;
-  font-size: 16px;
+  margin: 0;
+  font-size: 24px;
   font-weight: 600;
   color: #303133;
 }
@@ -1026,7 +857,16 @@ export default {
 .employee-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.username-info {
+  color: #606266;
+  font-size: 13px;
+  background: #f5f7fa;
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 .realname-info {
@@ -1037,54 +877,132 @@ export default {
   border-radius: 4px;
 }
 
-.status-tag {
-  font-size: 12px;
-}
-
-.nickname {
-  font-size: 12px;
+.game-info {
+  font-size: 14px;
   color: #909399;
 }
 
-.card-body {
-  margin-bottom: 12px;
+.header-actions {
+  display: flex;
+  gap: 12px;
 }
 
-.info-row {
+.content-area {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.detail-tabs {
+  min-height: 600px;
+}
+
+.detail-tabs :deep(.el-tabs__header) {
+  margin: 0;
+  background: #f5f7fa;
+  padding: 0 20px;
+}
+
+.detail-tabs :deep(.el-tabs__content) {
+  padding: 12px;
+}
+
+/* 基本信息样式 */
+.basic-info-section {
+  width: 100%;
+}
+
+.info-card {
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.skills-card {
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.basic-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.info-item {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
-  font-size: 14px;
+  gap: 12px;
 }
 
-.info-row:last-child {
-  margin-bottom: 0;
-}
-
-.label {
+.info-item label {
+  font-weight: 500;
   color: #606266;
-  margin-right: 8px;
-  min-width: fit-content;
+  min-width: 70px;
 }
 
-.value {
-  color: #303133;
-  margin-right: 16px;
-}
-
-.value.highlight {
+.highlight {
   color: #409eff;
   font-weight: 600;
 }
 
-.card-footer {
+
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.skill-card {
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fafafa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.skill-header {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.skill-header h4 {
+  margin: 0;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.skill-content {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  justify-content: flex-end;
-  margin-top: auto;
-  padding: 12px 16px;
-  margin: 12px -16px 0 -16px;
-  border-top: 1px solid #f0f0f0;
+}
+
+.skill-item {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+}
+
+.skill-item .label {
+  font-weight: 500;
+  color: #606266;
+  margin-right: 8px;
+  min-width: 70px;
+}
+
+.skill-item .value {
+  color: #303133;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
 }
 
 /* 图片资料区域样式 */
@@ -1282,33 +1200,36 @@ export default {
 }
 
 
-
 @media (max-width: 768px) {
   .page-header {
-    flex-direction: column;
-    gap: 20px;
-    text-align: center;
-  }
-  
-  .stats-bar {
-    gap: 20px;
-  }
-  
-  .employee-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .section-header {
     flex-direction: column;
     gap: 16px;
     align-items: stretch;
   }
   
-  .filter-controls {
+  .header-left {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .employee-info {
     justify-content: center;
   }
   
-  .game-skills-grid {
+  .header-actions {
+    justify-content: center;
+  }
+  
+  .employee-name {
+    font-size: 20px;
+  }
+  
+  .basic-info {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .skills-grid {
     grid-template-columns: 1fr;
   }
 }
