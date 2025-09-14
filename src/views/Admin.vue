@@ -2814,7 +2814,7 @@ export default {
           const { isLogoutInProgress, lastLogoutTime } = authStore.state
           const timeSinceLogout = Date.now() - lastLogoutTime
           
-          if (isLogoutInProgress || timeSinceLogout < 5000) {
+          if (isLogoutInProgress || timeSinceLogout < 100) {
             console.log('🚪 正在登出或刚刚登出，跳过用户信息获取')
             return
           }
@@ -2969,8 +2969,7 @@ export default {
 <style scoped>
 .admin-dashboard {
   padding: 12px;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .page-header {
@@ -3046,9 +3045,23 @@ export default {
 
 .employee-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
   min-height: 200px;
+}
+
+@media (min-width: 1200px) {
+  .employee-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .employee-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+  }
 }
 
 .employee-card {

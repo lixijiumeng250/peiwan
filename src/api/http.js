@@ -43,7 +43,7 @@ http.interceptors.request.use(
     const authUrls = ['/auth/me', '/auth/login']
     const isAuthUrl = authUrls.some(url => config.url === url)
     
-    if ((isLogoutInProgress || timeSinceLogout < 5000) && isAuthUrl) {
+    if ((isLogoutInProgress || timeSinceLogout < 100) && isAuthUrl) {
       console.log('🚫 阻止登出期间的认证请求:', config.url, config.method?.toUpperCase())
       const error = new Error('用户正在登出，取消认证请求')
       error.isAuthCancel = true // 标记为认证取消错误，避免错误提示

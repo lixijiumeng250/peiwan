@@ -605,8 +605,7 @@ export default {
 <style scoped>
 .employee-detail {
   padding: 12px;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .page-header {

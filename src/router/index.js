@@ -76,7 +76,7 @@ router.beforeEach(async (to, from, next) => {
   const { isLogoutInProgress, lastLogoutTime } = authStore.state
   const timeSinceLogout = Date.now() - lastLogoutTime
   
-  if (isLogoutInProgress || timeSinceLogout < 5000) {
+  if (isLogoutInProgress || timeSinceLogout < 100) {
     console.log('🚪 检测到登出状态，强制清理轮询并跳转到登录页')
     
     // 强制清除所有轮询
@@ -122,7 +122,7 @@ router.beforeEach(async (to, from, next) => {
         const { isLogoutInProgress, lastLogoutTime } = authStore.state
         const timeSinceLogout = Date.now() - lastLogoutTime
         
-        if (isLogoutInProgress || timeSinceLogout < 5000) {
+        if (isLogoutInProgress || timeSinceLogout < 100) {
           console.log('🚪 刚刚登出或正在登出中，直接重定向到登录页，跳过认证检查')
           next({
             path: '/',
@@ -196,7 +196,7 @@ router.beforeEach(async (to, from, next) => {
     const { isLogoutInProgress, lastLogoutTime } = authStore.state
     const timeSinceLogout = Date.now() - lastLogoutTime
     
-    if (isLogoutInProgress || timeSinceLogout < 2000) {
+    if (isLogoutInProgress || timeSinceLogout < 100) {
       console.log('🚪 刚刚登出或正在登出中，显示登录页')
       next()
       return

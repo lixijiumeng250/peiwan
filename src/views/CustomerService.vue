@@ -484,7 +484,7 @@ export default {
           const { isLogoutInProgress, lastLogoutTime } = authStore.state
           const timeSinceLogout = Date.now() - lastLogoutTime
           
-          if (isLogoutInProgress || timeSinceLogout < 5000) {
+          if (isLogoutInProgress || timeSinceLogout < 100) {
             console.log('🚪 正在登出或刚刚登出，跳过用户信息获取')
             return
           }
@@ -827,8 +827,7 @@ export default {
 <style scoped>
 .customer-service {
   padding: 12px;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .page-header {

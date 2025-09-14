@@ -50,23 +50,23 @@
         <el-table-column
           prop="orderNumber"
           label="单号"
-          width="100"
+          min-width="120"
           sortable="custom"
         />
         <el-table-column
           prop="customerName"
           label="委托人"
-          width="100"
+          min-width="120"
         />
         <el-table-column
           prop="game"
           label="游戏类型"
-          width="100"
+          min-width="120"
         />
         <el-table-column
           prop="playStyle"
           label="陪玩类型"
-          width="100"
+          min-width="120"
         >
           <template #default="scope">
             {{ getPlayStyleLabel(scope.row.playStyle) }}
@@ -75,7 +75,7 @@
         <el-table-column
           prop="serviceType"
           label="服务类型"
-          width="100"
+          min-width="120"
         >
           <template #default="scope">
             {{ getServiceTypeLabel(scope.row.serviceType) }}
@@ -84,7 +84,7 @@
         <el-table-column
           prop="status"
           label="完成状态"
-          width="100"
+          min-width="120"
         >
           <template #default="scope">
             <el-tag
@@ -98,7 +98,7 @@
         <el-table-column
           prop="createdAt"
           label="创建时间"
-          width="120"
+          min-width="160"
           sortable="custom"
         >
           <template #default="scope">
@@ -108,7 +108,7 @@
         <el-table-column
           prop="completedAt"
           label="完成时间"
-          width="120"
+          min-width="160"
         >
           <template #default="scope">
             {{ scope.row.completedAt ? formatDateTime(scope.row.completedAt) : '-' }}
@@ -116,7 +116,7 @@
         </el-table-column>
         <el-table-column
           label="操作"
-          width="200"
+          min-width="240"
           fixed="right"
         >
           <template #default="scope">
@@ -2630,15 +2630,16 @@ export default {
 
 <style scoped>
 .employee-work-records {
-  padding: 20px;
+  padding: 16px;
+  width: 100%;
 }
 
 .actions-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 16px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);

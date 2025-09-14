@@ -67,28 +67,28 @@
         <el-table-column
           prop="orderNumber"
           label="单号"
-          width="100"
+          min-width="120"
           sortable="custom"
         />
         <el-table-column
           prop="customerName"
           label="委托人"
-          width="100"
+          min-width="120"
         />
         <el-table-column
           prop="game"
           label="游戏类型"
-          width="100"
+          min-width="120"
         />
         <el-table-column
           prop="serviceType"
           label="服务类型"
-          width="100"
+          min-width="120"
         />
         <el-table-column
           prop="status"
           label="完成状态"
-          width="100"
+          min-width="120"
         >
           <template #default="scope">
             <el-tag
@@ -102,7 +102,7 @@
         <el-table-column
           prop="createdAt"
           label="创建时间"
-          width="150"
+          min-width="160"
           sortable="custom"
         >
           <template #default="scope">
@@ -112,7 +112,7 @@
         <el-table-column
           prop="completedAt"
           label="完成时间"
-          width="150"
+          min-width="160"
           sortable="custom"
         >
           <template #default="scope">
@@ -121,7 +121,7 @@
         </el-table-column>
         <el-table-column
           label="操作"
-          width="200"
+          min-width="200"
           fixed="right"
         >
           <template #default="scope">
@@ -866,14 +866,15 @@ export default {
 <style scoped>
 .work-records {
   min-height: 400px;
+  width: 100%;
 }
 
 .actions-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 16px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
   background: #f5f7fa;
   border-radius: 6px;
 }

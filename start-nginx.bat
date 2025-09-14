@@ -21,8 +21,8 @@ if not errorlevel 1 (
     echo Nginx已经在运行中
     echo.
     echo 访问地址:
-    echo - 前端: http://localhost
-    echo - 后端API: http://localhost/api
+    echo - 前端: http://www.peiwan.cloud
+    echo - 后端API: http://www.peiwan.cloud/api
     echo.
     echo 停止Nginx: nginx.exe -s stop
     pause
@@ -47,8 +47,8 @@ if errorlevel 1 (
 echo ✓ Nginx启动成功
 echo.
 echo 访问地址:
-echo - 前端应用: http://localhost
-echo - 后端API: http://localhost/api
+echo - 前端应用: http://www.peiwan.cloud
+echo - 后端API: http://www.peiwan.cloud/api
 echo.
 echo 常用命令:
 echo - 停止Nginx: nginx.exe -s stop

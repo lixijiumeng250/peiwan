@@ -109,8 +109,8 @@ echo.
 echo === 部署完成! ===
 echo.
 echo 访问地址:
-echo - 前端应用: http://localhost
-echo - 后端API: http://localhost/api
+echo - 前端应用: http://www.peiwan.cloud
+echo - 后端API: http://www.peiwan.cloud/api
 echo.
 echo 常用命令:
 echo - 启动Nginx: cd /d "%NGINX_DIR%" ^&^& start nginx.exe

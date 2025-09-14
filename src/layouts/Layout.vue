@@ -31,15 +31,18 @@ export default {
 .main-content {
   flex: 1;
   width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 20px;
+  padding: 16px;
 }
 
 @media (max-width: 768px) {
   .main-content {
-    max-width: 375px;
-    padding: 15px;
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: 8px;
   }
 }
 </style>

@@ -382,9 +382,9 @@ const actions = {
         return false
       }
       
-      // 如果刚刚登出（5秒内），避免立即调用认证检查
+      // 如果刚刚登出（立即允许重新登录），避免立即调用认证检查
       const timeSinceLogout = Date.now() - state.lastLogoutTime
-      if (timeSinceLogout < 5000) {
+      if (timeSinceLogout < 100) {
         console.log(`🚪 刚刚登出 ${timeSinceLogout}ms 前，跳过用户信息获取`)
         return false
       }

@@ -117,7 +117,7 @@ class ErrorHandler {
     const { isLogoutInProgress, lastLogoutTime } = authStore.state
     const timeSinceLogout = Date.now() - lastLogoutTime
     
-    if (isLogoutInProgress || timeSinceLogout < 5000) {
+    if (isLogoutInProgress || timeSinceLogout < 100) {
       console.log('🚪 登出期间的认证错误，不显示错误提示')
     } else {
       ElMessage.error(errorInfo.message)

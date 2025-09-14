@@ -2,7 +2,6 @@
   <header class="header">
     <div class="header-content">
       <div class="logo">
-        <img src="https://picsum.photos/40/40" alt="Logo" />
         <span class="site-name">陪玩管理系统</span>
       </div>
       <nav class="nav">
@@ -171,8 +170,7 @@ export default {
 }
 
 .header-content {
-  max-width: 1320px;
-  margin: 0 auto;
+  width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
@@ -186,11 +184,6 @@ export default {
   gap: 10px;
 }
 
-.logo img {
-  width: 40px;
-  height: 40px;
-  border-radius: 4px;
-}
 
 .site-name {
   font-size: 18px;
@@ -309,7 +302,6 @@ export default {
 
 @media (max-width: 768px) {
   .header-content {
-    max-width: 375px;
     padding: 0 15px;
   }
   
@@ -324,6 +316,10 @@ export default {
   .auth-button {
     padding: 6px 12px;
     font-size: 13px;
+  }
+  
+  .site-name {
+    font-size: 16px;
   }
 }
 
@@ -350,6 +346,18 @@ export default {
     justify-content: center;
     margin-top: 10px;
     gap: 15px;
+  }
+  
+  .site-name {
+    font-size: 14px;
+  }
+  
+  .user-text {
+    display: none;
+  }
+  
+  .user-info {
+    padding: 4px 8px;
   }
 }
 </style>
