@@ -11,6 +11,11 @@ import http from './http'
  */
 export const login = async (loginData) => {
   try {
+    console.log('🔐 调用登录API - 时间戳:', new Date().toISOString())
+    console.log('🔐 登录数据:', { username: loginData.username, rememberMe: loginData.rememberMe })
+    console.trace('🔐 登录API调用堆栈:')
+    console.log('🔐 HTTP方法: POST, URL: /auth/login')
+    
     const response = await http.post('/auth/login', {
       username: loginData.username,
       password: loginData.password,
@@ -51,6 +56,7 @@ export const login = async (loginData) => {
  * @param {Object} registerData - 注册数据
  * @param {string} registerData.username - 用户名
  * @param {string} registerData.realName - 真实姓名
+ * @param {string} [registerData.phone] - 手机号（可选）
  * @param {string} registerData.password - 密码
  * @param {string} registerData.confirmPassword - 确认密码
  * @returns {Promise} 注册结果
@@ -60,6 +66,7 @@ export const register = async (registerData) => {
     const response = await http.post('/auth/register', {
       username: registerData.username,
       realName: registerData.realName,
+      phone: registerData.phone || '',
       password: registerData.password,
       confirmPassword: registerData.confirmPassword
     })
@@ -97,6 +104,10 @@ export const register = async (registerData) => {
  */
 export const logout = async () => {
   try {
+    console.log('🚪 调用登出API - 时间戳:', new Date().toISOString())
+    console.trace('🚪 登出API调用堆栈:')
+    console.log('🚪 HTTP方法: POST, URL: /auth/logout')
+    
     const response = await http.post('/auth/logout')
     
     // 预期的后端响应格式
@@ -171,6 +182,31 @@ export const checkUsernameAvailability = async (username) => {
     return response
   } catch (error) {
     console.error('检查用户名可用性失败:', error)
+    throw error
+  }
+}
+
+/**
+ * 检查手机号可用性
+ * @param {string} phone - 手机号
+ * @returns {Promise} 验证结果
+ */
+export const checkPhoneAvailability = async (phone) => {
+  try {
+    const response = await http.get(`/auth/check-phone/${encodeURIComponent(phone)}`)
+    
+    // 预期的后端响应格式
+    // {
+    //   code: 0,
+    //   message: "",
+    //   data: true,  // true表示可用，false表示已被使用
+    //   timestamp: "",
+    //   requestId: ""
+    // }
+    
+    return response
+  } catch (error) {
+    console.error('检查手机号可用性失败:', error)
     throw error
   }
 }

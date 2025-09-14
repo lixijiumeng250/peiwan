@@ -114,6 +114,27 @@ export const getEmployeeOrdersForCS = async (userId) => {
 }
 
 /**
+ * 管理员获取指定员工的工单列表（使用X-User-Id请求头）
+ * @param {number} userId - 员工的用户ID
+ * @returns {Promise} 工单列表
+ */
+export const getEmployeeOrdersForAdmin = async (userId) => {
+  try {
+    console.log('管理员获取员工工单列表，设置X-User-Id为:', userId)
+    const response = await http.get('/employee/orders', {
+      headers: {
+        'X-User-Id': userId
+      }
+    })
+    console.log('管理员获取员工工单API响应:', response)
+    return response
+  } catch (error) {
+    console.error('管理员获取员工工单失败:', error)
+    throw error
+  }
+}
+
+/**
  * 更新我的游戏技能
  * @param {Array} gameSkills - 游戏技能数组
  * @param {number} gameSkills[].profileId - 员工资料ID（必填）

@@ -168,7 +168,7 @@ export default {
     
     // 计算属性 - 权限控制
     const canEditBasicInfo = computed(() => {
-      return props.userRole === 'admin'
+      return props.userRole === 'ADMIN'
     })
     
     // 个人信息数据

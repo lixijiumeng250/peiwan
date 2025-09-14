@@ -2,6 +2,7 @@
 import { reactive, computed } from 'vue'
 import * as customerServiceAPI from '../api/customerService'
 import * as csEmployeeMappingsAPI from '../api/csEmployeeMappings'
+import authStore from './auth'
 
 // 创建响应式状态
 const state = reactive({
@@ -115,14 +116,13 @@ const actions = {
       this.setLoading('employees', true)
       this.clearError()
       
-      // 获取当前用户ID
-      const userInfo = sessionStorage.getItem('user_info')
-      if (!userInfo) {
-        throw new Error('用户信息不存在，请重新登录')
+      // 通过认证store获取当前用户信息
+      const currentUser = authStore.getters.currentUser.value
+      if (!currentUser) {
+        throw new Error('用户未认证，请重新登录')
       }
       
-      const user = JSON.parse(userInfo)
-      const csUserId = user.id
+      const csUserId = currentUser.id
       
       if (!csUserId) {
         throw new Error('无法获取客服用户ID')
@@ -181,7 +181,7 @@ const actions = {
       
       console.log('处理后的员工数据:', state.employees, '数量:', state.employees.length, '类型:', typeof state.employees)
       
-      // 获取员工的实时状态信息
+      // 获取员工的实时状态信息（只获取状态，不获取工单数据）
       await this.enrichEmployeeStatesFromCS()
       
       return {
@@ -205,7 +205,7 @@ const actions = {
     try {
       console.log('开始从CS API获取员工状态信息...')
       
-      // 调用 /cs/employees 获取员工状态
+      // 调用 /cs/employees 获取员工状态（仅客服角色使用）
       const response = await customerServiceAPI.getEmployees()
       console.log('CS员工API响应:', response)
       
@@ -342,6 +342,47 @@ const actions = {
     }))
     
     console.log('员工列表已从轮询更新，数量:', state.employees.length)
+  },
+
+  // 从轮询更新员工状态（只更新状态相关字段，保持响应式）
+  updateEmployeeStatusFromPolling(statusData) {
+    console.log('从轮询更新员工状态:', statusData)
+    
+    if (!Array.isArray(statusData)) {
+      console.warn('状态数据不是数组，忽略更新')
+      return
+    }
+    
+    // 创建更新后的员工数组，确保触发Vue响应式更新
+    const updatedEmployees = state.employees.map(employee => {
+      const newStatus = statusData.find(emp => 
+        emp.id === employee.id || 
+        emp.userId === employee.id || 
+        emp.userId === employee.employeeUserId
+      )
+      
+      if (newStatus) {
+        console.log(`更新员工 ${employee.name} 的状态: ${employee.workStatus} -> ${newStatus.workStatus || newStatus.status}`)
+        
+        // 创建新的员工对象，保持其他字段不变
+        return {
+          ...employee,
+          workStatus: newStatus.workStatus || newStatus.status || 'OFF_DUTY',
+          gender: newStatus.gender || employee.gender,
+          avatar: newStatus.avatar || employee.avatar,
+          todayOrders: newStatus.todayOrders !== undefined ? newStatus.todayOrders : employee.todayOrders,
+          totalOrders: newStatus.totalOrders !== undefined ? newStatus.totalOrders : employee.totalOrders,
+          rating: newStatus.rating !== undefined ? newStatus.rating : employee.rating
+        }
+      }
+      
+      return employee
+    })
+    
+    // 替换整个数组以确保Vue响应式更新
+    state.employees = updatedEmployees
+    
+    console.log('员工状态已从轮询更新，更新后的员工列表:', state.employees)
   },
 
   // 获取员工个人资料

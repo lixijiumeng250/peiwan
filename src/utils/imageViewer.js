@@ -10,8 +10,11 @@ export function showImagePreview(imagePath) {
   // 解析并获取可用的图片URL
   let url = imagePath
   
+  // 直接支持本地 blob 预览
+  if (imagePath && imagePath.startsWith('blob:')) {
+    url = imagePath
   // 如果是上传接口返回的路径格式，转换为查看URL
-  if (imagePath && !imagePath.startsWith('http') && imagePath.includes('/uploads/')) {
+  } else if (imagePath && !imagePath.startsWith('http') && imagePath.includes('/uploads/')) {
     url = getViewableImageUrl(imagePath)
   } else if (imagePath && !imagePath.startsWith('http')) {
     // 尝试解析为上传路径
@@ -107,7 +110,9 @@ export function showMultipleImages(imagePaths, initialIndex = 0) {
 
   // 处理所有图片路径
   const urls = imagePaths.map(path => {
-    if (path && !path.startsWith('http') && path.includes('/uploads/')) {
+    if (path && path.startsWith('blob:')) {
+      return path
+    } else if (path && !path.startsWith('http') && path.includes('/uploads/')) {
       return getViewableImageUrl(path)
     } else if (path && !path.startsWith('http')) {
       return getImageUrl(path)
@@ -272,15 +277,23 @@ function showImageGallery(urls, initialIndex = 0) {
 export function getPreviewUrl(imagePath) {
   if (!imagePath) return ''
   
-  // 如果是上传接口返回的路径格式，转换为查看URL
-  if (!imagePath.startsWith('http') && imagePath.includes('/uploads/')) {
-    return getViewableImageUrl(imagePath)
-  } else if (!imagePath.startsWith('http')) {
-    // 尝试解析为上传路径
-    return getImageUrl(imagePath)
+  // 如果是blob URL，直接返回（用于本地文件预览）
+  if (imagePath.startsWith('blob:')) {
+    return imagePath
   }
   
-  return imagePath
+  // 如果是完整的HTTP/HTTPS URL，直接返回
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath
+  }
+  
+  // 如果是上传接口返回的路径格式，转换为查看URL
+  if (imagePath.includes('/uploads/')) {
+    return getViewableImageUrl(imagePath)
+  }
+  
+  // 尝试解析为上传路径
+  return getImageUrl(imagePath)
 }
 
 /**

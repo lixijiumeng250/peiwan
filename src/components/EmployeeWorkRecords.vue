@@ -926,8 +926,8 @@
 import { ref, computed, onMounted, onActivated, onUnmounted, watch, reactive, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, Picture, Check, Close, Plus } from '@element-plus/icons-vue'
-import { getAssignedOrders, acceptOrder, completeOrder, renewOrder, getEmployeeOrdersForCS } from '../api/employee'
-import { getOrders, auditOrder } from '../api/customerService'
+import { getAssignedOrders, acceptOrder, completeOrder, renewOrder, getEmployeeOrdersForCS, getEmployeeOrdersForAdmin } from '../api/employee'
+import { getOrders, auditOrder, getEmployeeOrders } from '../api/customerService'
 import { uploadImage, validateImageFile } from '../api/upload'
 import { showImagePreview, getPreviewUrl, getImageInfo } from '../utils/imageViewer'
 import { handleApiError } from '../utils/errorHandler'
@@ -968,6 +968,9 @@ export default {
     const dateRange = ref([])
     const isLoading = ref(false)
     const isUploading = ref(false)
+    
+    // 用户操作标记，用于避免在用户自己操作时显示"工单已更新"提示
+    const userOperationInProgress = ref(false)
     
     // 计算用户角色
     const userRole = computed(() => authStore.getters.userRole.value)
@@ -1041,9 +1044,9 @@ export default {
         const userRole = authStore.getters.userRole.value
         let response
         
-        if (userRole?.toUpperCase() === 'CS' || userRole?.toUpperCase() === 'ADMIN') {
-          // 客服/管理员角色根据是否指定员工选择不同的接口
-          console.log('客服/管理员角色 - 检查参数:', {
+        if (userRole?.toUpperCase() === 'CS') {
+          // 客服角色根据是否指定员工选择不同的接口
+          console.log('客服角色 - 检查参数:', {
             userRole: userRole,
             employeeId: props.employeeId,
             employee: props.employee,
@@ -1051,21 +1054,22 @@ export default {
           })
           
           if (props.employeeId) {
-            // 在员工详情页面，必须等待员工信息加载完成
-            if (props.employee?.userId) {
-              // 查看特定员工的工单，使用employee/orders接口并设置X-User-Id
-              console.log('客服/管理员角色，查看特定员工工单，调用getEmployeeOrdersForCS，员工userId:', props.employee.userId)
-              response = await getEmployeeOrdersForCS(props.employee.userId)
-            } else {
-              // 员工信息还未加载完成，跳过此次请求
-              console.log('客服/管理员角色，员工信息未加载完成，跳过工单请求')
-              isLoading.value = false
-              return
-            }
+            // 在员工详情页面，使用新的客服获取指定员工工单接口
+            console.log('客服角色，查看特定员工工单，调用getEmployeeOrders，员工ID:', props.employeeId)
+            response = await getEmployeeOrders(props.employeeId)
           } else {
             // 查看所有工单，使用原有的cs/orders接口（仅在客服主页面）
             console.log('客服角色，查看所有工单，调用getOrders')
             response = await getOrders({})
+          }
+        } else if (userRole?.toUpperCase() === 'ADMIN') {
+          // 管理员角色：使用X-User-Id请求头调用员工工单接口
+          if (props.employeeId && props.employee?.userId) {
+            console.log('管理员角色，查看特定员工工单，调用getEmployeeOrdersForAdmin，员工userId:', props.employee.userId)
+            response = await getEmployeeOrdersForAdmin(props.employee.userId)
+          } else {
+            console.log('管理员角色，缺少员工userId，返回空数据')
+            response = { code: 200, data: [] }
           }
         } else {
           // 员工角色使用原有的 employee 接口
@@ -1287,30 +1291,50 @@ export default {
     
     // 开始智能轮询
     const startPollingData = () => {
+      // 检查用户角色和员工信息
+      const userRole = authStore.getters.userRole.value
+      if (userRole?.toUpperCase() === 'ADMIN' && (!props.employeeId || !props.employee?.userId)) {
+        console.log('管理员角色但缺少员工信息，跳过工单轮询')
+        return
+      }
+      
       const pollingKey = `employee-orders-${props.employeeId || 'all'}`
       const interval = POLLING_CONFIG.EMPLOYEE_ORDERS * 1000
       
       // 数据获取函数
       const dataFetcher = async () => {
+        // 首先检查用户是否已登出
+        const isAuthenticated = authStore.getters.isAuthenticated.value
+        const isLogoutInProgress = authStore.state.isLogoutInProgress
+        
+        if (!isAuthenticated || isLogoutInProgress) {
+          console.log('🚫 用户已登出或登出进行中，停止轮询数据获取')
+          // 立即停止当前轮询
+          stopPollingData()
+          throw new Error('用户已登出，停止轮询')
+        }
+        
         console.log('轮询获取工单数据...')
         
         // 根据用户角色选择不同的接口
         const userRole = authStore.getters.userRole.value
         let response
         
-        if (userRole?.toUpperCase() === 'CS' || userRole?.toUpperCase() === 'ADMIN') {
-          // 客服/管理员角色
+        if (userRole?.toUpperCase() === 'CS') {
+          // 客服角色
           if (props.employeeId) {
-            // 查看特定员工的工单
-            if (props.employee?.userId) {
-              response = await getEmployeeOrdersForCS(props.employee.userId)
-            } else {
-              console.log('员工信息未加载完成，跳过轮询')
-              return workRecords.value || []
-            }
+            // 查看特定员工的工单，使用新的客服接口
+            response = await getEmployeeOrders(props.employeeId)
           } else {
             // 查看所有工单
             response = await getOrders({})
+          }
+        } else if (userRole?.toUpperCase() === 'ADMIN') {
+          // 管理员角色：使用X-User-Id请求头调用员工工单接口
+          if (props.employeeId && props.employee?.userId) {
+            response = await getEmployeeOrdersForAdmin(props.employee.userId)
+          } else {
+            response = { code: 200, data: [] }
           }
         } else {
           // 员工角色
@@ -1361,8 +1385,8 @@ export default {
       const onOrderChange = (newData, oldData, changes) => {
         console.log('检测到工单数据变化，更新UI')
         
-        if (changes && changes.length > 0) {
-          // 显示变化通知
+        if (changes && changes.length > 0 && !userOperationInProgress.value) {
+          // 只有在不是用户自己操作时才显示变化通知
           ElMessage.info(`工单数据已更新 (${changes.length}个变化)`)
         }
         
@@ -1370,7 +1394,16 @@ export default {
         workRecords.value = newData
         
         // 触发父组件刷新事件
-        emit('refresh')
+        if (!userOperationInProgress.value) {
+          emit('refresh')
+        }
+        
+        // 重置用户操作标记
+        if (userOperationInProgress.value) {
+          setTimeout(() => {
+            userOperationInProgress.value = false
+          }, 1000) // 1秒后重置标记
+        }
       }
       
       // 开始智能轮询
@@ -1382,8 +1415,25 @@ export default {
     // 停止轮询
     const stopPollingData = () => {
       const pollingKey = `employee-orders-${props.employeeId || 'all'}`
-      stopPolling(pollingKey)
-      console.log('停止轮询工单数据')
+      console.log('🛑 EmployeeWorkRecords 停止轮询工单数据')
+      
+      try {
+        stopPolling(pollingKey)
+        console.log('✅ 工单轮询已停止:', pollingKey)
+      } catch (e) {
+        console.warn('⚠️ 停止工单轮询失败:', e)
+      }
+      
+      // 额外保险：如果是特定的员工轮询，也尝试停止通用的轮询key
+      if (props.employeeId) {
+        try {
+          stopPolling('employee-orders-all')
+          stopPolling(`employee-orders`)
+          console.log('✅ 额外清理了通用工单轮询')
+        } catch (e) {
+          console.warn('⚠️ 清理通用工单轮询失败:', e)
+        }
+      }
     }
     
     // 手动刷新数据
@@ -1448,6 +1498,7 @@ export default {
     // 确认续单
     const confirmContinueOrder = async () => {
       try {
+        userOperationInProgress.value = true // 设置用户操作标记
         console.log('开始续单，工单ID:', currentOrder.value.id)
         console.log('续单前工单状态:', currentOrder.value.status)
         
@@ -1504,6 +1555,7 @@ export default {
     // 审核通过
     const approveOrder = async (order) => {
       try {
+        userOperationInProgress.value = true // 设置用户操作标记
         await auditOrder(order.id, {
           action: 'APPROVE',
           comments: '审核通过'
@@ -1523,6 +1575,7 @@ export default {
     // 审核拒绝
     const rejectOrder = async (order) => {
       try {
+        userOperationInProgress.value = true // 设置用户操作标记
         await auditOrder(order.id, {
           action: 'REJECT',
           comments: '审核未通过'
@@ -1599,6 +1652,7 @@ export default {
     // 处理审核通过 (从详情页)
     const handleAuditApprove = async () => {
       try {
+        userOperationInProgress.value = true // 设置用户操作标记
         await auditOrder(currentOrderDetail.value.id, {
           action: 'APPROVE',
           comments: '审核通过'
@@ -1619,6 +1673,7 @@ export default {
     // 处理审核拒绝 (从详情页)
     const handleAuditReject = async () => {
       try {
+        userOperationInProgress.value = true // 设置用户操作标记
         await auditOrder(currentOrderDetail.value.id, {
           action: 'REJECT',
           comments: '审核未通过'
@@ -1926,6 +1981,7 @@ export default {
       }
       
       isUploading.value = true
+      userOperationInProgress.value = true // 设置用户操作标记
       try {
         // 先上传图片
         console.log('开始上传接单截图...', acceptFile.value.raw)
@@ -1998,6 +2054,7 @@ export default {
       }
       
       isUploading.value = true
+      userOperationInProgress.value = true // 设置用户操作标记
       try {
         // 先上传图片
         console.log('开始上传完成截图...', completeFile.value.raw)
@@ -2308,6 +2365,7 @@ export default {
       }
       
       isReUploading.value = true
+      userOperationInProgress.value = true // 设置用户操作标记
       try {
         // 上传完成图片
         console.log('开始重新上传完成截图...', reuploadCompleteFile.value.raw)
@@ -2440,6 +2498,7 @@ export default {
       dateRange,
       isLoading,
       isUploading,
+      userOperationInProgress,
       acceptScreenshotVisible,
       completeScreenshotVisible,
       continueOrderVisible,

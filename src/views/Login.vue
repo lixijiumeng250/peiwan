@@ -183,11 +183,23 @@ export default {
             this.$router.push(redirectPath)
           }, 100)
         } else {
+          let errorMessage = result.message || '用户名或密码错误'
+          let messageType = 'error'
+          let duration = 3000
+          
+          // 如果是"未找到用户信息"错误，提供更友好的提示
+          if (errorMessage.includes('未找到用户')) {
+            errorMessage = '未找到用户信息。如果您刚刚注册，请稍等片刻后再试，或检查用户名是否正确。'
+            messageType = 'warning'
+            duration = 5000
+          }
+          
           ElMessage({
-            message: result.message || '用户名或密码错误',
-            type: 'error',
-            duration: 3000,
-            offset: 12
+            message: errorMessage,
+            type: messageType,
+            duration: duration,
+            offset: 12,
+            showClose: true
           })
         }
         
@@ -231,6 +243,26 @@ export default {
     if (authStore.getters.isAuthenticated.value) {
       this.$router.push('/')
       return
+    }
+    
+    // 处理来自注册页面的参数
+    if (this.$route.query.fromRegister === 'true') {
+      // 自动填充用户名
+      if (this.$route.query.username) {
+        this.loginForm.username = this.$route.query.username
+      }
+      
+      // 显示提示信息
+      if (this.$route.query.tip) {
+        this.$nextTick(() => {
+          ElMessage({
+            message: this.$route.query.tip,
+            type: 'info',
+            duration: 5000,
+            showClose: true
+          })
+        })
+      }
     }
     
     // 清除之前的错误状态

@@ -7,16 +7,32 @@
         <form @submit.prevent="handleRegister" class="auth-form">
           <div class="form-group">
             <label for="username">用户名</label>
-            <input
-              id="username"
-              type="text"
-              v-model="registerForm.username"
-              placeholder="请输入用户名"
-              required
-              class="form-input"
-              :class="{ 'error': errors.username }"
-            />
-            <span v-if="errors.username" class="error-message">{{ errors.username }}</span>
+            <div class="username-input-wrapper">
+              <input
+                id="username"
+                type="text"
+                v-model="registerForm.username"
+                placeholder="请输入用户名"
+                required
+                class="form-input"
+                :class="{ 
+                  'error': errors.username,
+                  'username-success': usernameValidationStatus.status === 'success',
+                  'username-error': usernameValidationStatus.status === 'error'
+                }"
+                @blur="validateUsername"
+              />
+              <div class="validation-icon" v-if="usernameValidationStatus.loading || usernameValidationStatus.status">
+                <span v-if="usernameValidationStatus.loading" class="loading-spinner-small"></span>
+                <span v-else-if="usernameValidationStatus.status === 'success'" class="success-icon">✓</span>
+                <span v-else-if="usernameValidationStatus.status === 'error'" class="error-icon">✗</span>
+              </div>
+            </div>
+            <span v-if="usernameValidationStatus.message" 
+                  class="validation-message" 
+                  :class="usernameValidationStatus.status === 'success' ? 'success-message' : 'error-message'">
+              {{ usernameValidationStatus.message }}
+            </span>
           </div>
           
           <div class="form-group">
@@ -31,6 +47,35 @@
               :class="{ 'error': errors.realName }"
             />
             <span v-if="errors.realName" class="error-message">{{ errors.realName }}</span>
+          </div>
+          
+          <div class="form-group">
+            <label for="phone">手机号码</label>
+            <div class="phone-input-wrapper">
+              <input
+                id="phone"
+                type="text"
+                v-model="registerForm.phone"
+                placeholder="请输入手机号码（可选）"
+                class="form-input"
+                :class="{ 
+                  'error': errors.phone,
+                  'phone-success': phoneValidationStatus.status === 'success',
+                  'phone-error': phoneValidationStatus.status === 'error'
+                }"
+                @blur="validatePhone"
+              />
+              <div class="validation-icon" v-if="phoneValidationStatus.loading || phoneValidationStatus.status">
+                <span v-if="phoneValidationStatus.loading" class="loading-spinner-small"></span>
+                <span v-else-if="phoneValidationStatus.status === 'success'" class="success-icon">✓</span>
+                <span v-else-if="phoneValidationStatus.status === 'error'" class="error-icon">✗</span>
+              </div>
+            </div>
+            <span v-if="phoneValidationStatus.message" 
+                  class="validation-message" 
+                  :class="phoneValidationStatus.status === 'success' ? 'success-message' : 'error-message'">
+              {{ phoneValidationStatus.message }}
+            </span>
           </div>
           
           <div class="form-group">
@@ -106,6 +151,7 @@
 <script>
 import { ElMessage } from 'element-plus'
 import authStore from '../store/auth'
+import { checkUsernameAvailability, checkPhoneAvailability } from '../api/auth'
 
 export default {
   name: 'Register',
@@ -114,6 +160,7 @@ export default {
       registerForm: {
         username: '',
         realName: '',
+        phone: '',
         password: '',
         confirmPassword: ''
       },
@@ -121,7 +168,18 @@ export default {
       errors: {},
       showPassword: false,
       showConfirmPassword: false,
-      usernameCheckTimeout: null
+      usernameCheckTimeout: null,
+      phoneCheckTimeout: null,
+      usernameValidationStatus: {
+        loading: false,
+        status: '', // 'success', 'error', ''
+        message: ''
+      },
+      phoneValidationStatus: {
+        loading: false,
+        status: '', // 'success', 'error', ''
+        message: ''
+      }
     }
   },
   computed: {
@@ -139,6 +197,9 @@ export default {
     },
     'registerForm.realName'() {
       this.validateRealName()
+    },
+    'registerForm.phone'() {
+      this.debouncedValidatePhone()
     },
     'registerForm.password'() {
       this.validatePassword()
@@ -160,42 +221,177 @@ export default {
       }, 500)
     },
     
+    // 防抖验证手机号
+    debouncedValidatePhone() {
+      clearTimeout(this.phoneCheckTimeout)
+      this.phoneCheckTimeout = setTimeout(() => {
+        this.validatePhone()
+      }, 500)
+    },
+    
     
     // 验证用户名
     async validateUsername() {
-      const username = this.registerForm.username
+      const username = this.registerForm.username?.trim()
       
       if (!username) {
-        delete this.errors.username
+        this.usernameValidationStatus = {
+          loading: false,
+          status: '',
+          message: ''
+        }
         return
       }
       
-      if (username.length < 3) {
-        this.errors.username = '用户名至少需要3个字符'
+      if (username.length < 2) {
+        this.usernameValidationStatus = {
+          loading: false,
+          status: 'error',
+          message: '用户名至少需要2个字符'
+        }
         return
       }
       
       if (username.length > 20) {
-        this.errors.username = '用户名不能超过20个字符'
+        this.usernameValidationStatus = {
+          loading: false,
+          status: 'error',
+          message: '用户名不能超过20个字符'
+        }
         return
       }
       
       if (!/^[a-zA-Z0-9_\u4e00-\u9fa5]+$/.test(username)) {
-        this.errors.username = '用户名只能包含字母、数字、下划线和中文'
+        this.usernameValidationStatus = {
+          loading: false,
+          status: 'error',
+          message: '用户名只能包含字母、数字、下划线和中文'
+        }
         return
       }
       
-      // 检查用户名可用性
+      // 调用API检查用户名可用性
+      this.usernameValidationStatus.loading = true
+      console.log('正在检查用户名可用性:', username)
+      
       try {
-        const isAvailable = await authStore.actions.checkUsername(username)
-        if (!isAvailable) {
-          this.errors.username = '用户名已被占用'
+        const response = await checkUsernameAvailability(username)
+        console.log('用户名验证API完整响应:', response)
+        console.log('响应code:', response?.code)
+        console.log('响应data:', response?.data)
+        console.log('响应类型:', typeof response?.data)
+        
+        // 检查响应格式 - 兼容 code 0 和 200
+        const isSuccessCode = response && (response.code === 0 || response.code === 200)
+        
+        if (isSuccessCode && response.data === true) {
+          this.usernameValidationStatus = {
+            loading: false,
+            status: 'success',
+            message: '用户名可用'
+          }
+        } else if (isSuccessCode && response.data === false) {
+          this.usernameValidationStatus = {
+            loading: false,
+            status: 'error',
+            message: '用户名已被其他用户使用'
+          }
         } else {
-          delete this.errors.username
+          // 响应格式不符合预期
+          console.warn('用户名验证API响应格式异常:', response)
+          this.usernameValidationStatus = {
+            loading: false,
+            status: 'error',
+            message: '用户名验证服务异常，请稍后重试'
+          }
         }
       } catch (error) {
-        console.warn('检查用户名可用性失败:', error)
-        delete this.errors.username
+        console.error('检查用户名可用性失败:', error)
+        console.error('错误详情:', error.response?.data || error.message)
+        this.usernameValidationStatus = {
+          loading: false,
+          status: 'error',
+          message: '检查用户名失败，请稍后重试'
+        }
+      }
+    },
+    
+    // 验证手机号
+    async validatePhone() {
+      const phone = this.registerForm.phone?.trim()
+      
+      if (!phone) {
+        this.phoneValidationStatus = {
+          loading: false,
+          status: '',
+          message: ''
+        }
+        return
+      }
+      
+      // 手机号格式验证（宽松验证，允许多种格式）
+      if (phone.length < 3 || phone.length > 20) {
+        this.phoneValidationStatus = {
+          loading: false,
+          status: 'error',
+          message: '手机号长度不正确'
+        }
+        return
+      }
+      
+      // 只包含数字、+号、-号、空格、括号
+      if (!/^[\d\+\-\s\(\)]+$/.test(phone)) {
+        this.phoneValidationStatus = {
+          loading: false,
+          status: 'error',
+          message: '手机号格式不正确，请输入有效的手机号'
+        }
+        return
+      }
+      
+      // 调用API检查手机号可用性
+      this.phoneValidationStatus.loading = true
+      console.log('正在检查手机号可用性:', phone)
+      
+      try {
+        const response = await checkPhoneAvailability(phone)
+        console.log('手机号验证API完整响应:', response)
+        console.log('响应code:', response?.code)
+        console.log('响应data:', response?.data)
+        console.log('响应类型:', typeof response?.data)
+        
+        // 检查响应格式 - 兼容 code 0 和 200
+        const isSuccessCode = response && (response.code === 0 || response.code === 200)
+        
+        if (isSuccessCode && response.data === true) {
+          this.phoneValidationStatus = {
+            loading: false,
+            status: 'success',
+            message: '手机号可用'
+          }
+        } else if (isSuccessCode && response.data === false) {
+          this.phoneValidationStatus = {
+            loading: false,
+            status: 'error',
+            message: '手机号已被其他用户使用，请更换手机号'
+          }
+        } else {
+          // 响应格式不符合预期
+          console.warn('手机号验证API响应格式异常:', response)
+          this.phoneValidationStatus = {
+            loading: false,
+            status: 'error',
+            message: '手机号验证服务异常，请稍后重试'
+          }
+        }
+      } catch (error) {
+        console.error('检查手机号可用性失败:', error)
+        console.error('错误详情:', error.response?.data || error.message)
+        this.phoneValidationStatus = {
+          loading: false,
+          status: 'error',
+          message: '检查手机号失败，请稍后重试'
+        }
       }
     },
     
@@ -257,11 +453,17 @@ export default {
     },
     
     // 验证整个表单
-    validateForm() {
-      this.validateUsername()
+    async validateForm() {
+      // 先进行基本验证
       this.validateRealName()
       this.validatePassword()
       this.validateConfirmPassword()
+      
+      // 异步验证用户名和手机号
+      const usernamePromise = this.validateUsername()
+      const phonePromise = this.validatePhone()
+      
+      await Promise.all([usernamePromise, phonePromise])
       
       // 检查必填字段
       const requiredFields = ['username', 'realName', 'password', 'confirmPassword']
@@ -271,6 +473,16 @@ export default {
         }
       })
       
+      // 检查验证状态
+      if (this.usernameValidationStatus.status === 'error') {
+        return false
+      }
+      
+      if (this.registerForm.phone && this.phoneValidationStatus.status === 'error') {
+        return false
+      }
+      
+      // 检查是否有必填字段错误
       return Object.keys(this.errors).length === 0
     },
     
@@ -286,7 +498,14 @@ export default {
       authStore.actions.clearError()
       
       // 验证表单
-      if (!this.validateForm()) {
+      const isValid = await this.validateForm()
+      if (!isValid) {
+        ElMessage({
+          message: '请修正表单中的错误后再提交',
+          type: 'warning',
+          duration: 3000,
+          showClose: true
+        })
         return
       }
       
@@ -305,6 +524,7 @@ export default {
         const result = await authStore.actions.register({
           username: this.registerForm.username,
           realName: this.registerForm.realName,
+          phone: this.registerForm.phone || '', // 手机号可选
           password: this.registerForm.password,
           confirmPassword: this.registerForm.confirmPassword
         })
@@ -312,16 +532,23 @@ export default {
         if (result.success) {
           // 注册成功
           ElMessage({
-            message: `注册成功！欢迎加入，${result.user?.username || '用户'}！`,
+            message: `注册成功！欢迎加入，${result.user?.username || '用户'}！正在为您跳转到登录页面...`,
             type: 'success',
-            duration: 3000,
+            duration: 4000,
             showClose: true
           })
           
-          // 延迟跳转到登录页面，让用户看到成功提示
+          // 增加延迟时间，确保后端数据已经写入
           setTimeout(() => {
-            this.$router.push('/login')
-          }, 1500)
+            this.$router.push({
+              path: '/login',
+              query: { 
+                username: this.registerForm.username,
+                fromRegister: 'true',
+                tip: '注册成功，请使用刚才的用户名和密码登录'
+              }
+            })
+          }, 2500)
         } else {
           // 注册失败，显示错误消息
           ElMessage({
@@ -358,6 +585,7 @@ export default {
       this.registerForm = {
         username: 'testuser' + Date.now().toString().slice(-4),
         realName: '测试用户',
+        phone: '13800138000',
         password: 'test123456',
         confirmPassword: 'test123456'
       }
@@ -380,6 +608,7 @@ export default {
   // 组件卸载时清理
   beforeUnmount() {
     clearTimeout(this.usernameCheckTimeout)
+    clearTimeout(this.phoneCheckTimeout)
     authStore.actions.clearError()
   }
 }
@@ -466,7 +695,9 @@ export default {
   color: #c0c4cc;
 }
 
-.password-input-wrapper {
+.password-input-wrapper,
+.username-input-wrapper,
+.phone-input-wrapper {
   position: relative;
 }
 
@@ -493,6 +724,90 @@ export default {
   font-size: 12px;
   margin-top: 4px;
   display: block;
+}
+
+.success-message {
+  color: #67c23a;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+.validation-message {
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+.validation-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.loading-spinner-small {
+  width: 14px;
+  height: 14px;
+  border: 2px solid transparent;
+  border-top: 2px solid #409eff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.success-icon {
+  color: #67c23a;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.error-icon {
+  color: #f56c6c;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+/* 用户名验证样式 */
+.username-success {
+  border-color: #67c23a !important;
+}
+
+.username-success:focus {
+  border-color: #67c23a !important;
+  box-shadow: 0 0 0 2px rgba(103, 194, 58, 0.2) !important;
+}
+
+.username-error {
+  border-color: #f56c6c !important;
+}
+
+.username-error:focus {
+  border-color: #f56c6c !important;
+  box-shadow: 0 0 0 2px rgba(245, 108, 108, 0.2) !important;
+}
+
+/* 手机号验证样式 */
+.phone-success {
+  border-color: #67c23a !important;
+}
+
+.phone-success:focus {
+  border-color: #67c23a !important;
+  box-shadow: 0 0 0 2px rgba(103, 194, 58, 0.2) !important;
+}
+
+.phone-error {
+  border-color: #f56c6c !important;
+}
+
+.phone-error:focus {
+  border-color: #f56c6c !important;
+  box-shadow: 0 0 0 2px rgba(245, 108, 108, 0.2) !important;
 }
 
 .form-options {

@@ -317,7 +317,7 @@ export default {
           id: personalInfo.id || 0, // 员工资料ID，如果没有则为0（新建）
           userId: userId, // 用户ID - 使用正确的userId字段
           gender: editingGenderValue.value, // 更新的性别
-          workStatus: personalInfo.workStatus, // 保持原有工作状态
+          // 不发送 workStatus 字段，避免意外修改工作状态
           createdAt: personalInfo.createdAt || '', // 保持原有创建时间
           updatedAt: personalInfo.updatedAt || '', // 保持原有更新时间
           deleted: personalInfo.deleted || 0 // 保持原有删除标记

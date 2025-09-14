@@ -112,18 +112,38 @@ class ErrorHandler {
 
   // 认证错误处理
   handleAuthError(errorInfo, context) {
-    ElMessage.error(errorInfo.message)
+    // 检查是否是登出期间的认证错误，如果是则不显示错误提示
+    const { isLogoutInProgress, lastLogoutTime } = authStore.state
+    const timeSinceLogout = Date.now() - lastLogoutTime
     
-    // 清除认证状态
+    if (isLogoutInProgress || timeSinceLogout < 5000) {
+      console.log('🚪 登出期间的认证错误，不显示错误提示')
+    } else {
+      ElMessage.error(errorInfo.message)
+    }
+    
+    // 清除认证状态和轮询
     authStore.actions.clearAuth()
     
-    // 重定向到登录页
-    const currentRoute = router.currentRoute.value
-    if (currentRoute.name !== 'Login') {
-      router.push({
-        name: 'Login',
-        query: { redirect: currentRoute.fullPath }
-      })
+    // 清除所有轮询定时器
+    try {
+      const { usePolling } = require('./polling')
+      const { clearAllPolling } = usePolling()
+      clearAllPolling()
+      console.log('认证错误：已清除所有轮询定时器')
+    } catch (e) {
+      console.warn('清除轮询失败', e)
+    }
+    
+    // 重定向到登录页（但在登出期间不重定向）
+    if (!(isLogoutInProgress || timeSinceLogout < 5000)) {
+      const currentRoute = router.currentRoute.value
+      if (currentRoute.name !== 'Login') {
+        router.push({
+          name: 'Login',
+          query: { redirect: currentRoute.fullPath }
+        })
+      }
     }
   }
 

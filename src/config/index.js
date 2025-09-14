@@ -2,8 +2,8 @@
 export default {
   // API配置
   api: {
-    // 基础URL - 连接到真实后端服务器
-    baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+    // 基础URL - 强制使用相对路径通过Vite代理
+    baseURL: '/api',
     // 请求超时时间
     timeout: 10000,
     // 重试次数

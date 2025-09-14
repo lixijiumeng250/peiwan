@@ -106,13 +106,15 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { WarningFilled } from '@element-plus/icons-vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import authStore from '../store/auth'
 import { getProfile, getAssignedOrders, updateProfile } from '../api/employee'
 import EmployeePersonalStatus from '../components/EmployeePersonalStatus.vue'
 import EmployeeWorkRecords from '../components/EmployeeWorkRecords.vue'
+import { usePolling } from '../utils/polling'
 
 export default {
   name: 'Employee',
@@ -122,6 +124,9 @@ export default {
     WarningFilled
   },
   setup() {
+    // 轮询管理
+    const { stopPolling, clearAllPolling, forceStopAllPolling, getActivePollingKeys } = usePolling()
+    
     // 响应式数据
     const activeTab = ref('status')
     const employeeStatus = ref('IDLE')
@@ -262,6 +267,55 @@ export default {
       initializeData()
     })
     
+    // 停止所有轮询的方法
+    const stopAllPolling = () => {
+      console.log('🚨 Employee 停止所有轮询')
+      
+      // 1. 先通知子组件停止轮询（优先级最高）
+      if (workRecordsRef.value && workRecordsRef.value.stopPollingData) {
+        console.log('📢 通知 EmployeeWorkRecords 组件停止轮询')
+        try {
+          workRecordsRef.value.stopPollingData()
+        } catch (e) {
+          console.warn('⚠️ 子组件轮询停止失败:', e)
+        }
+      }
+      
+      // 2. 获取当前活跃轮询
+      const activePolling = getActivePollingKeys()
+      console.log('📊 Employee 活跃轮询列表:', activePolling)
+      
+      // 3. 强制清除所有轮询（使用最强力的方法）
+      console.log('🧹 强制清除所有轮询（暴力模式）')
+      forceStopAllPolling()
+      
+      // 4. 延迟检查并再次强制清理（双重保险）
+      setTimeout(() => {
+        const stillActive = getActivePollingKeys()
+        if (stillActive.length > 0) {
+          console.log('🚨 发现残留轮询，再次强制清理:', stillActive)
+          forceStopAllPolling()
+        } else {
+          console.log('✅ 确认所有轮询已停止')
+        }
+      }, 100)
+      
+      console.log('✅ Employee 轮询停止完成')
+    }
+    
+    // 路由离开守卫 - 确保离开页面时停止轮询
+    onBeforeRouteLeave((to, from, next) => {
+      console.log('Employee onBeforeRouteLeave, 停止所有轮询')
+      stopAllPolling()
+      next()
+    })
+    
+    // 组件卸载时确保停止所有轮询
+    onUnmounted(() => {
+      console.log('Employee onUnmounted, 确保停止所有轮询')
+      stopAllPolling()
+    })
+    
     return {
       // 响应式数据
       activeTab,
@@ -279,7 +333,8 @@ export default {
       handleTabChange,
       handleStatusChange,
       refreshEmployeeStatus,
-      refreshWorkRecords
+      refreshWorkRecords,
+      stopAllPolling
     }
   }
 }

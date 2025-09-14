@@ -77,7 +77,7 @@
 </template>
 
 <script>
-import { computed, ref } from 'vue'
+import { computed, ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
@@ -126,9 +126,11 @@ export default {
             )
             
             if (result === 'confirm') {
+              // 立即执行登出操作，不延迟
               await authStore.actions.logout()
-              ElMessage.success('退出登录成功')
-              router.push('/login')
+              
+              // 直接跳转到根路径
+              router.push('/')
             }
           } catch (error) {
             if (error !== 'cancel') {

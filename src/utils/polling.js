@@ -5,6 +5,7 @@ class PollingManager {
     this.dataCache = new Map() // 存储每个轮询的数据缓存，用于比对
     this.defaultInterval = 10000 // 默认10秒轮询一次
     this.isPageVisible = true // 页面是否可见
+    this.isShuttingDown = false // 是否正在关闭轮询系统
     this.setupVisibilityListener()
   }
 
@@ -29,7 +30,11 @@ class PollingManager {
     
     const timer = setInterval(() => {
       if (this.isPageVisible) {
-        callback()
+        try {
+          callback()
+        } catch (error) {
+          console.warn(`轮询回调执行失败 ${key}:`, error)
+        }
       }
     }, interval)
     
@@ -156,13 +161,38 @@ class PollingManager {
 
   // 清除所有轮询
   clearAllPolling() {
+    console.log(`🧹 开始清除所有轮询，当前活跃轮询数量: ${this.timers.size}`)
+    console.log(`🧹 活跃轮询键列表:`, Array.from(this.timers.keys()))
+    
     this.timers.forEach((timer, key) => {
-      clearInterval(timer)
-      console.log(`清除轮询: ${key}`)
+      try {
+        clearInterval(timer)
+        console.log(`✅ 已清除轮询: ${key}`)
+      } catch (e) {
+        console.warn(`⚠️ 清除轮询失败 ${key}:`, e)
+      }
     })
     this.timers.clear()
+    
     // 清除所有缓存数据
     this.dataCache.clear()
+    console.log(`🧹 轮询清理完成，剩余轮询数量: ${this.timers.size}`)
+    
+    // 额外保险：延迟检查是否有残留轮询
+    setTimeout(() => {
+      if (this.timers.size > 0) {
+        console.warn(`🚨 发现残留轮询，重新清理:`, Array.from(this.timers.keys()))
+        this.timers.forEach((timer, key) => {
+          try {
+            clearInterval(timer)
+            console.log(`🔄 重新清除轮询: ${key}`)
+          } catch (e) {
+            console.warn(`⚠️ 重新清除轮询失败 ${key}:`, e)
+          }
+        })
+        this.timers.clear()
+      }
+    }, 100)
   }
 
   // 检查是否有活跃的轮询
@@ -459,6 +489,42 @@ class PollingManager {
 // 创建全局实例
 const pollingManager = new PollingManager()
 
+// 全局强制清理函数（用于紧急情况）
+export const forceStopAllPolling = () => {
+  console.log('🚨 强制停止所有轮询 - 紧急清理模式')
+  
+  // 清理轮询管理器中的定时器
+  pollingManager.clearAllPolling()
+  
+  // 额外保险：清理所有可能的定时器ID（暴力清理）
+  console.log('🚨 开始暴力清理所有定时器...')
+  const maxTimerId = setTimeout(() => {}, 0)
+  let clearedCount = 0
+  
+  for (let i = 1; i <= maxTimerId; i++) {
+    try {
+      clearInterval(i)
+      clearTimeout(i)
+      clearedCount++
+    } catch (e) {
+      // 忽略清理错误
+    }
+  }
+  clearTimeout(maxTimerId)
+  
+  console.log(`🚨 强制清理完成，共清理了 ${clearedCount} 个定时器`)
+  
+  // 最终检查
+  setTimeout(() => {
+    const remainingPolling = pollingManager.getActivePollingKeys()
+    if (remainingPolling.length > 0) {
+      console.error('🚨 警告：强制清理后仍有残留轮询:', remainingPolling)
+    } else {
+      console.log('✅ 确认：所有轮询已彻底清理')
+    }
+  }, 200)
+}
+
 // 导出工具函数
 export const usePolling = () => {
   return {
@@ -487,9 +553,19 @@ export const usePolling = () => {
       pollingManager.clearAllPolling()
     },
     
+    // 强制清除所有轮询
+    forceStopAllPolling: () => {
+      forceStopAllPolling()
+    },
+    
     // 检查轮询状态
     hasActivePolling: (key) => {
       return pollingManager.hasActivePolling(key)
+    },
+    
+    // 获取活跃轮询列表
+    getActivePollingKeys: () => {
+      return pollingManager.getActivePollingKeys()
     }
   }
 }
@@ -510,6 +586,23 @@ export const POLLING_CONFIG = {
   
   // 员工状态轮询间隔（秒）
   EMPLOYEE_STATUS: 5
+}
+
+// 开发环境下添加全局调试函数
+if (import.meta.env.DEV) {
+  window.debugPolling = {
+    getActivePolling: () => pollingManager.getActivePollingKeys(),
+    clearAllPolling: () => pollingManager.clearAllPolling(),
+    forceStopAll: () => forceStopAllPolling(),
+    getTimersCount: () => pollingManager.timers.size,
+    showStatus: () => {
+      console.log('🔍 轮询状态检查:')
+      console.log('活跃轮询数量:', pollingManager.timers.size)
+      console.log('活跃轮询列表:', pollingManager.getActivePollingKeys())
+      console.log('缓存数据数量:', pollingManager.dataCache.size)
+    }
+  }
+  console.log('🛠️ 开发模式：全局轮询调试工具已加载 (window.debugPolling)')
 }
 
 export default pollingManager

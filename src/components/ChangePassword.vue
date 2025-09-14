@@ -206,11 +206,11 @@ const handleSubmit = async () => {
             cancelButtonText: '稍后登录',
             type: 'success'
           }
-        ).then(() => {
+        ).then(async () => {
           // 用户选择立即重新登录
-          authStore.actions.logout()
-          // 这里可以添加跳转到登录页面的逻辑
-          window.location.reload()
+          await authStore.actions.logout()
+          // 跳转到登录页面，不使用reload避免意外请求
+          this.$router.push('/')
         }).catch(() => {
           // 用户选择稍后登录，不做任何操作
         })

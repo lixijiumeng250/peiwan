@@ -103,3 +103,18 @@ export const getEmployeeGameSkills = async (employeeId) => {
     throw error
   }
 }
+
+/**
+ * 获取指定员工的工单
+ * @param {number} employeeId - 员工ID
+ * @returns {Promise} 员工工单列表
+ */
+export const getEmployeeOrders = async (employeeId) => {
+  try {
+    const response = await http.get(`/cs/employees/${employeeId}/orders`)
+    return response
+  } catch (error) {
+    console.error('获取员工工单失败:', error)
+    throw error
+  }
+}

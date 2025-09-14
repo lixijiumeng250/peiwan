@@ -4,10 +4,16 @@ import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
 import NotFound from '../views/NotFound.vue'
 import authStore from '../store/auth'
+import { usePolling } from '../utils/polling'
 
 const routes = [
   {
     path: '/',
+    name: 'Login',
+    component: Login
+  },
+  {
+    path: '/app',
     component: Layout,
     children: [
       {
@@ -40,23 +46,12 @@ const routes = [
         name: 'EmployeeDetail',
         component: () => import('../views/EmployeeDetail.vue'),
         meta: { requiresAuth: true, roles: ['EMPLOYEE', 'ADMIN'] }
-      },
-      {
-        path: '/polling-test',
-        name: 'PollingTest',
-        component: () => import('../views/PollingTest.vue'),
-        meta: { requiresAuth: true }
-      },
-      {
-        path: '',
-        redirect: '/employee' // 默认重定向到员工页面
       }
     ]
   },
   {
     path: '/login',
-    name: 'Login',
-    component: Login
+    redirect: '/'
   },
   {
     path: '/register',
@@ -76,17 +71,87 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
+  // 首先检查登出状态，如果正在登出或刚刚登出，立即处理
+  const { isLogoutInProgress, lastLogoutTime } = authStore.state
+  const timeSinceLogout = Date.now() - lastLogoutTime
+  
+  if (isLogoutInProgress || timeSinceLogout < 5000) {
+    console.log('🚪 检测到登出状态，强制清理轮询并跳转到登录页')
+    
+    // 强制清除所有轮询
+    const { forceStopAllPolling } = usePolling()
+    forceStopAllPolling()
+    
+    // 如果目标不是登录页，重定向到登录页
+    if (to.path !== '/' && to.name !== 'Login') {
+      next('/')
+      return
+    }
+  }
+  
+  // 如果跳转到登录页面，强制清除所有轮询
+  if (to.path === '/' || to.name === 'Login') {
+    const { clearAllPolling, forceStopAllPolling, getActivePollingKeys } = usePolling()
+    
+    const activePolling = getActivePollingKeys()
+    console.log('🔄 跳转到登录页面，当前活跃轮询:', activePolling)
+    
+    if (activePolling.length > 0) {
+      clearAllPolling()
+      
+      // 延迟检查并强制清理残留轮询
+      setTimeout(() => {
+        const stillActive = getActivePollingKeys()
+        if (stillActive.length > 0) {
+          console.log('🚨 路由跳转时发现残留轮询，启动强制清理:', stillActive)
+          forceStopAllPolling()
+        }
+      }, 50)
+    }
+    
+    console.log('🔄 登录页面轮询清理完成')
+  }
+  
   // 检查是否需要认证
   if (to.matched.some(record => record.meta.requiresAuth)) {
-    // 检查用户是否已登录
+    // Cookie 模式：只有在内存中没有用户信息时才向后端确认
     if (!authStore.getters.isAuthenticated.value) {
-      // 未登录，重定向到登录页
-      next({
-        name: 'Login',
-        query: { redirect: to.fullPath }
-      })
-      return
+      try {
+        // 检查是否刚刚登出，如果是则直接跳转到登录页，避免无效的API调用
+        const { isLogoutInProgress, lastLogoutTime } = authStore.state
+        const timeSinceLogout = Date.now() - lastLogoutTime
+        
+        if (isLogoutInProgress || timeSinceLogout < 5000) {
+          console.log('🚪 刚刚登出或正在登出中，直接重定向到登录页，跳过认证检查')
+          next({
+            path: '/',
+            query: { redirect: to.fullPath }
+          })
+          return
+        }
+        
+        console.log('🔐 需要认证检查，当前无用户信息，调用 fetchCurrentUser')
+        const ok = await authStore.actions.fetchCurrentUser()
+        if (!ok) {
+          // 未登录，重定向到根路径（登录页）
+          console.log('🔐 认证检查失败，重定向到登录页')
+          next({
+            path: '/',
+            query: { redirect: to.fullPath }
+          })
+          return
+        }
+        console.log('🔐 认证检查成功，继续路由')
+      } catch (error) {
+        // 认证检查失败，重定向到登录页
+        console.log('🔐 认证检查异常，重定向到登录页:', error.message)
+        next({
+          path: '/',
+          query: { redirect: to.fullPath }
+        })
+        return
+      }
     }
     
     // 检查角色权限
@@ -125,8 +190,18 @@ router.beforeEach((to, from, next) => {
     }
   }
   
-  // 如果已登录用户访问登录页，根据角色重定向
-  if (to.name === 'Login' && authStore.getters.isAuthenticated.value) {
+  // 如果已登录用户访问根路径（登录页），根据角色重定向
+  if (to.path === '/' && authStore.getters.isAuthenticated.value) {
+    // 检查是否刚刚登出，如果是则不进行角色重定向，直接显示登录页
+    const { isLogoutInProgress, lastLogoutTime } = authStore.state
+    const timeSinceLogout = Date.now() - lastLogoutTime
+    
+    if (isLogoutInProgress || timeSinceLogout < 2000) {
+      console.log('🚪 刚刚登出或正在登出中，跳过角色重定向，显示登录页')
+      next()
+      return
+    }
+    
     const userRole = authStore.getters.userRole.value?.toUpperCase()
     if (userRole === 'ADMIN') {
       next({ name: 'Admin' })

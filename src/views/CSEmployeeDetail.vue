@@ -246,7 +246,7 @@
                 </div>
                 <div v-else class="screenshot-uploaded">
                   <img 
-                    :src="assignOrderData.screenshotUrl" 
+                    :src="getPreviewUrl(assignOrderData.screenshotUrl)" 
                     alt="派单图片"
                     class="screenshot-image"
                     @click="previewScreenshot"
@@ -290,10 +290,11 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onActivated, watch, reactive, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed, onMounted, onActivated, onUnmounted, onDeactivated, watch, reactive, nextTick, onBeforeUnmount } from 'vue'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { handleApiError } from '../utils/errorHandler'
+import { usePolling, POLLING_CONFIG } from '../utils/polling'
 import {
   ArrowLeft,
   DocumentAdd,
@@ -304,9 +305,9 @@ import {
   Delete
 } from '@element-plus/icons-vue'
 import customerServiceStore from '../store/customerService'
-import { showImagePreview } from '../utils/imageViewer'
+import { showImagePreview, getPreviewUrl } from '../utils/imageViewer'
 import { uploadImage, validateImageFile } from '../api/upload'
-import { getEmployeeGameSkillsForCS } from '../api/employee'
+import { getEmployeeGameSkillsForCS, getProfileForUser } from '../api/employee'
 import authStore from '../store/auth'
 import EmployeeWorkRecords from '../components/EmployeeWorkRecords.vue'
 
@@ -325,6 +326,9 @@ export default {
     const router = useRouter()
     // 用户角色（用于控制是否显示派单按钮）
     const userRole = computed(() => authStore.getters.userRole.value)
+    
+    // 轮询管理
+    const { startPolling, stopPolling, startSmartPolling } = usePolling()
     
     // 响应式数据
     const activeTab = ref('info')
@@ -423,6 +427,10 @@ export default {
     }
     
     const goBack = () => {
+      // 返回前确保停止轮询
+      console.log('goBack: 停止轮询')
+      stopPollingEmployeeInfo()
+      
       // 管理员从管理员页面进入时返回管理员页，其它角色返回客服页
       const role = userRole.value?.toUpperCase()
       if (role === 'ADMIN') {
@@ -435,6 +443,9 @@ export default {
     // 加载员工基本信息
     const loadEmployeeInfo = async () => {
       try {
+        // 检查用户角色，如果是管理员则使用不同的逻辑
+        const role = userRole.value?.toUpperCase()
+        
         // 首先尝试从store中获取员工信息
         const currentEmployee = customerServiceStore.getters.currentEmployee.value
         
@@ -454,8 +465,45 @@ export default {
             avatar: currentEmployee.avatar
           }
           console.log('从store获取员工信息:', employeeInfo.value)
+        } else if (role === 'ADMIN') {
+          // 管理员角色：直接使用路由参数中的employeeId作为userId来设置X-User-ID
+          console.log('管理员模式：使用employeeId作为userId:', employeeId.value)
+          
+          // 首先尝试从store中获取员工基本信息
+          if (currentEmployee && currentEmployee.id === employeeId.value) {
+            employeeInfo.value = {
+              id: currentEmployee.id,
+              userId: employeeId.value, // 管理员模式下，直接使用employeeId作为userId用于X-User-ID
+              username: currentEmployee.username || currentEmployee.employeeUsername,
+              realName: currentEmployee.realName || currentEmployee.employeeRealName || currentEmployee.name,
+              gender: currentEmployee.gender || 'MALE',
+              workStatus: currentEmployee.workStatus || 'OFF_DUTY',
+              game: currentEmployee.game || '未设置',
+              todayOrders: currentEmployee.todayOrders || 0,
+              totalOrders: currentEmployee.totalOrders || 0,
+              rating: currentEmployee.rating || 0,
+              avatar: currentEmployee.avatar || ''
+            }
+            console.log('管理员模式：从store获取员工信息，设置userId为employeeId:', employeeInfo.value)
+          } else {
+            // 如果store中没有信息，创建基本结构
+            employeeInfo.value = {
+              id: employeeId.value,
+              userId: employeeId.value, // 管理员模式下，直接使用employeeId作为userId用于X-User-ID
+              username: '',
+              realName: '',
+              gender: 'MALE',
+              workStatus: 'OFF_DUTY',
+              game: '未设置',
+              todayOrders: 0,
+              totalOrders: 0,
+              rating: 0,
+              avatar: ''
+            }
+            console.log('管理员模式：创建基本员工信息结构，设置userId为employeeId:', employeeInfo.value)
+          }
         } else {
-          // 如果store中没有信息，先刷新员工列表
+          // 客服角色：使用原有逻辑调用客服API
           const result = await customerServiceStore.actions.fetchEmployees()
           
           if (result.success) {
@@ -477,7 +525,7 @@ export default {
                 rating: employee.rating || 0,
                 avatar: employee.avatar
               }
-              console.log('从员工列表获取员工信息:', employeeInfo.value)
+              console.log('客服模式：从员工列表获取员工信息:', employeeInfo.value)
             } else {
               ElMessage.error('员工不存在')
               goBack()
@@ -528,6 +576,31 @@ export default {
         skillsLoading.value = false
       }
     }
+
+    // 加载员工个人资料（通过 X-User-Id 指定员工）并合并到基本信息
+    const loadEmployeeProfile = async () => {
+      try {
+        if (!employeeInfo.value?.userId) {
+          console.log('员工userId不存在，无法获取个人资料')
+          return null
+        }
+        const resp = await getProfileForUser(employeeInfo.value.userId)
+        if (resp && resp.code === 200 && resp.data) {
+          const profile = resp.data
+          // 合并性别、工作状态与 profileId
+          employeeInfo.value = {
+            ...employeeInfo.value,
+            gender: profile.gender || employeeInfo.value.gender,
+            workStatus: profile.workStatus || employeeInfo.value.workStatus,
+            profileId: profile.id
+          }
+          return profile
+        }
+      } catch (error) {
+        console.error('加载员工个人资料失败:', error)
+      }
+      return null
+    }
     
     const refreshData = async () => {
       isRefreshing.value = true
@@ -545,6 +618,13 @@ export default {
     
     const refreshWorkRecords = async () => {
       if (!employeeId.value) return
+      
+      // 检查用户角色，管理员不调用客服API
+      const role = userRole.value?.toUpperCase()
+      if (role === 'ADMIN') {
+        console.log('管理员角色，跳过工作记录刷新')
+        return
+      }
       
       const result = await customerServiceStore.actions.fetchWorkRecords(employeeId.value)
       if (!result.success) {
@@ -731,14 +811,92 @@ export default {
       }
     }
     
+    // 开始轮询员工信息（基于个人资料 /employee/profile）
+    const startPollingEmployeeInfo = () => {
+      const pollingKey = `employee-detail-${employeeId.value}`
+      const interval = POLLING_CONFIG.CS_EMPLOYEES * 1000
+      
+      // 数据获取函数
+      const dataFetcher = async () => {
+        console.log('轮询获取员工个人资料...')
+        try {
+          const targetUserId = employeeInfo.value?.userId
+          if (!targetUserId) return employeeInfo.value
+          const resp = await getProfileForUser(targetUserId)
+          if (resp && resp.code === 200 && resp.data) {
+            return resp.data
+          }
+        } catch (error) {
+          console.error('轮询获取个人资料失败:', error)
+        }
+        return employeeInfo.value
+      }
+      
+      // 数据变化处理函数
+      const onEmployeeInfoChange = (newData, oldData, changes) => {
+        console.log('检测到员工个人资料变化，更新UI')
+        // 合并变更到显示信息
+        const merged = {
+          ...employeeInfo.value,
+          gender: newData?.gender ?? employeeInfo.value?.gender,
+          workStatus: newData?.workStatus ?? employeeInfo.value?.workStatus,
+          profileId: newData?.id ?? employeeInfo.value?.profileId
+        }
+        // 判断关键字段是否变化
+        const genderChanged = oldData && newData && oldData.gender !== newData.gender
+        const statusChanged = oldData && newData && oldData.workStatus !== newData.workStatus
+        employeeInfo.value = merged
+        
+        if (genderChanged || statusChanged) {
+          ElMessage.info('员工资料已更新')
+          // 关键资料变化后刷新游戏技能
+          loadGameSkills()
+        }
+      }
+      
+      // 开始智能轮询
+      startSmartPolling(pollingKey, dataFetcher, onEmployeeInfoChange, interval)
+      
+      console.log(`开始轮询员工详情信息，间隔: ${POLLING_CONFIG.CS_EMPLOYEES}秒`)
+    }
+    
+    // 停止轮询员工信息
+    const stopPollingEmployeeInfo = () => {
+      const pollingKey = `employee-detail-${employeeId.value}`
+      console.log(`正在停止轮询: ${pollingKey}`)
+      stopPolling(pollingKey)
+      console.log(`轮询已停止: ${pollingKey}`)
+      
+      // 额外保险：检查并清除所有可能的轮询键
+      const possibleKeys = [
+        `employee-detail-${employeeId.value}`,
+        `employee-detail-${route.params.id}`,
+        'employee-detail'
+      ]
+      
+      possibleKeys.forEach(key => {
+        if (key && key !== pollingKey) {
+          console.log(`检查并停止可能的轮询键: ${key}`)
+          stopPolling(key)
+        }
+      })
+    }
+    
+    
     // 监听路由参数变化
     watch(() => route.params.id, async (newId, oldId) => {
       console.log(`员工详情页面ID变化: ${oldId} -> ${newId}`)
       if (newId !== oldId && newId) {
+        // 停止旧的轮询
+        stopPollingEmployeeInfo()
+        
         await nextTick()
         setTimeout(async () => {
           await loadEmployeeInfo()
+          await loadEmployeeProfile()
           await loadGameSkills()
+          // 启动新的轮询
+          startPollingEmployeeInfo()
         }, 100)
       }
     }, { immediate: false })
@@ -749,7 +907,13 @@ export default {
       await nextTick()
       setTimeout(async () => {
         await loadEmployeeInfo()
+        await loadEmployeeProfile()
         await loadGameSkills()
+        
+        // 延迟启动轮询，避免与初始加载冲突
+        setTimeout(() => {
+          startPollingEmployeeInfo()
+        }, 3000) // 延迟3秒开始轮询
       }, 50)
     })
 
@@ -758,7 +922,36 @@ export default {
       console.log('CSEmployeeDetail onActivated, employeeId:', employeeId.value)
       await nextTick()
       await loadEmployeeInfo()
+      await loadEmployeeProfile()
       await loadGameSkills()
+      
+      // 重新启动轮询
+      startPollingEmployeeInfo()
+    })
+    
+    // 组件卸载时停止轮询
+    onUnmounted(() => {
+      console.log('CSEmployeeDetail onUnmounted, 停止轮询')
+      stopPollingEmployeeInfo()
+    })
+    
+    // 组件停用（离开路由但未销毁）时停止轮询，避免返回总览时继续请求
+    onDeactivated(() => {
+      console.log('CSEmployeeDetail onDeactivated, 停止轮询')
+      stopPollingEmployeeInfo()
+    })
+    
+    // 路由离开前停止轮询（确保在任何路由切换时都停止）
+    onBeforeRouteLeave((to, from, next) => {
+      console.log('CSEmployeeDetail beforeRouteLeave, 停止轮询')
+      stopPollingEmployeeInfo()
+      next()
+    })
+    
+    // 组件销毁前停止轮询（额外保险）
+    onBeforeUnmount(() => {
+      console.log('CSEmployeeDetail onBeforeUnmount, 停止轮询')
+      stopPollingEmployeeInfo()
     })
     
     return {
@@ -792,6 +985,7 @@ export default {
       handleScreenshotChange,
       removeScreenshot,
       previewScreenshot,
+      getPreviewUrl,
       handleDragOver,
       handleDragLeave,
       handleDrop,
@@ -801,6 +995,8 @@ export default {
       handleMouseLeave,
       handleAssignOrder,
       handleCloseAssignDialog,
+      startPollingEmployeeInfo,
+      stopPollingEmployeeInfo,
       userRole
     }
   }

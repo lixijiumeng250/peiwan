@@ -2,20 +2,24 @@
 import { reactive, computed } from 'vue'
 import * as authAPI from '../api/auth'
 import { resetCancelToken } from '../api/http'
+import { usePolling } from '../utils/polling'
+// Cookie 单会话模式：不使用 authManager，不存储 token
 
 // 创建响应式状态
 const state = reactive({
   user: null,
-  accessToken: sessionStorage.getItem('accessToken'),
-  refreshToken: sessionStorage.getItem('refreshToken'),
+  accessToken: null,
+  refreshToken: null,
   isLoading: false,
-  error: null
+  error: null,
+  isLogoutInProgress: false, // 标记是否正在登出
+  lastLogoutTime: 0 // 最后一次登出的时间戳
 })
 
 // 计算属性
 const getters = {
-  // 是否已登录
-  isAuthenticated: computed(() => !!state.accessToken && !!state.user),
+  // 是否已登录（Cookie 模式：仅基于用户信息）
+  isAuthenticated: computed(() => !!state.user),
   
   // 当前用户信息
   currentUser: computed(() => state.user),
@@ -24,7 +28,7 @@ const getters = {
   userRole: computed(() => state.user?.role || 'guest'),
   
   // 是否是管理员
-  isAdmin: computed(() => state.user?.role === 'admin'),
+  isAdmin: computed(() => state.user?.role === 'ADMIN'),
   
   // 加载状态
   isLoading: computed(() => state.isLoading),
@@ -53,41 +57,35 @@ const actions = {
   // 设置用户信息
   setUser(user) {
     state.user = user
-    if (user) {
-      sessionStorage.setItem('user_info', JSON.stringify(user))
-    } else {
-      sessionStorage.removeItem('user_info')
-    }
   },
   
   // 设置令牌
   setTokens(accessToken, refreshToken) {
     state.accessToken = accessToken
     state.refreshToken = refreshToken
-    
-    if (accessToken) {
-      sessionStorage.setItem('accessToken', accessToken)
-    } else {
-      sessionStorage.removeItem('accessToken')
-    }
-    
-    if (refreshToken) {
-      sessionStorage.setItem('refreshToken', refreshToken)
-    } else {
-      sessionStorage.removeItem('refreshToken')
-    }
   },
   
-  // 初始化认证状态（从sessionStorage恢复）
-  initAuth() {
+  // 同步设置认证状态（Cookie 模式仅同步内存）
+  setAuthState(_accessToken, _refreshToken, user) {
+    this.setTokens(null, null)
+    this.setUser(user)
+    // Cookie 模式：不需要前端存储，完全依赖后端会话
+  },
+  
+  // 初始化认证状态（Cookie 模式）
+  async initAuth() {
     try {
-      const userInfo = sessionStorage.getItem('user_info')
-      if (userInfo) {
-        state.user = JSON.parse(userInfo)
+      console.log('开始初始化认证状态（Cookie 模式）')
+      // 直接询问后端当前会话
+      const success = await this.fetchCurrentUser()
+      if (success) {
+        console.log('认证状态初始化成功:', {
+          user: state.user?.username,
+          role: state.user?.role
+        })
+      } else {
+        console.log('当前无有效会话')
       }
-      
-      state.accessToken = sessionStorage.getItem('accessToken')
-      state.refreshToken = sessionStorage.getItem('refreshToken')
     } catch (error) {
       console.error('初始化认证状态失败:', error)
       this.clearAuth()
@@ -95,7 +93,7 @@ const actions = {
   },
   
   // 用户登录
-  async login(loginData) {
+  async login(loginData, retryCount = 0) {
     try {
       this.setLoading(true)
       this.clearError()
@@ -105,9 +103,8 @@ const actions = {
       // 成功判定：兼容 code === 0 或 code === 200
       const isSuccessCode = response && (response.code === 0 || response.code === 200)
       if (isSuccessCode && response.data) {
-        // 先保存用户信息，再保存令牌，确保isAuthenticated状态正确
-        this.setUser(response.data.user)
-        this.setTokens(response.data.accessToken, response.data.refreshToken)
+        // Cookie 模式：后端设置 Cookie，这里仅同步用户并广播
+        this.setAuthState(null, null, response.data.user)
         
         return {
           success: true,
@@ -117,11 +114,27 @@ const actions = {
       } else {
         // 登录失败，返回具体的错误信息
         const errorMessage = response.message || '登录失败，请检查用户名和密码'
+        
+        // 如果是"未找到用户信息"且重试次数少于2次，则等待后重试
+        if (errorMessage.includes('未找到用户') && retryCount < 2) {
+          console.log(`用户可能刚注册，等待${1000 * (retryCount + 1)}ms后重试登录...`)
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)))
+          return this.login(loginData, retryCount + 1)
+        }
+        
         throw new Error(errorMessage)
       }
     } catch (error) {
       const apiMessage = error?.response?.data?.message
       const message = apiMessage || error.message || '登录失败，请稍后重试'
+      
+      // 如果是"未找到用户信息"且重试次数少于2次，则等待后重试
+      if (message.includes('未找到用户') && retryCount < 2) {
+        console.log(`用户可能刚注册，等待${1000 * (retryCount + 1)}ms后重试登录...`)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)))
+        return this.login(loginData, retryCount + 1)
+      }
+      
       this.setError(message)
       return {
         success: false,
@@ -165,26 +178,73 @@ const actions = {
   // 用户登出
   async logout() {
     try {
+      console.log('🚪 开始执行登出操作 - 时间戳:', new Date().toISOString())
+      console.trace('🚪 登出操作调用堆栈:')
+      
+      // 设置登出进行中标志
+      state.isLogoutInProgress = true
       this.setLoading(true)
       
-      // 先清除本地认证状态，防止新的请求使用过期token
+      // 立即停止所有轮询，不等待API响应
+      console.log('🚨 立即停止所有轮询')
+      const { forceStopAllPolling, getActivePollingKeys } = usePolling()
+      const activePolling = getActivePollingKeys()
+      console.log('📊 登出时活跃轮询:', activePolling)
+      
+      // 强制停止所有轮询（使用最暴力的方法）
+      console.log('🧹 使用暴力模式停止所有轮询')
+      forceStopAllPolling()
+      
+      // 延迟再次检查和清理（多重保险）
+      setTimeout(() => {
+        const stillActive = getActivePollingKeys()
+        if (stillActive.length > 0) {
+          console.log('🚨 登出后发现残留轮询，再次强制清理:', stillActive)
+          forceStopAllPolling()
+        } else {
+          console.log('✅ 确认登出时所有轮询已彻底停止')
+        }
+      }, 50)
+      
+      setTimeout(() => {
+        const finalCheck = getActivePollingKeys()
+        if (finalCheck.length > 0) {
+          console.log('🚨 最终检查发现残留轮询，最后一次强制清理:', finalCheck)
+          forceStopAllPolling()
+        } else {
+          console.log('✅ 最终确认：登出时轮询已彻底清理')
+        }
+      }, 200)
+      
+      // 调用后端登出接口
+      try { 
+        console.log('🌐 调用后端登出接口')
+        await authAPI.logout() 
+        console.log('✅ 后端登出接口调用成功')
+      } catch (e) { 
+        console.warn('⚠️ 登出API失败', e) 
+      }
+      
+      // 清除本地认证状态
+      console.log('🧹 清除本地认证状态')
       this.clearAuth()
       
-      // 然后调用后端登出接口（使用临时token）
-      const tempToken = sessionStorage.getItem('accessToken')
-      if (tempToken) {
-        try {
-          await authAPI.logout()
-        } catch (error) {
-          console.error('登出API调用失败:', error)
-          // 即使API调用失败，本地状态已经清除，不影响退出登录
-        }
-      }
+      console.log('✅ 登出操作完成')
     } catch (error) {
-      console.error('登出过程发生错误:', error)
+      console.error('❌ 登出过程发生错误:', error)
       // 确保本地状态被清除
       this.clearAuth()
+      // 确保轮询被清除
+      try {
+        const { forceStopAllPolling } = usePolling()
+        forceStopAllPolling()
+      } catch (e) {
+        console.warn('清除轮询失败', e)
+      }
     } finally {
+      // 清除登出进行中标志，设置登出时间戳
+      state.isLogoutInProgress = false
+      state.lastLogoutTime = Date.now()
       this.setLoading(false)
     }
   },
@@ -251,15 +311,39 @@ const actions = {
   
   // 清除认证状态
   clearAuth() {
+    console.log('🧹 清除认证状态')
+    
+    // 清除内存状态
     state.user = null
     state.accessToken = null
     state.refreshToken = null
     state.error = null
     
-    // 清除sessionStorage
-    sessionStorage.removeItem('accessToken')
-    sessionStorage.removeItem('refreshToken')
-    sessionStorage.removeItem('user_info')
+    // 确保清除所有轮询（额外保险 - 强制清理模式）
+    try {
+      const { clearAllPolling, forceStopAllPolling, getActivePollingKeys } = usePolling()
+      
+      const activePolling = getActivePollingKeys()
+      if (activePolling.length > 0) {
+        console.log('🚨 认证清除时发现活跃轮询:', activePolling)
+        clearAllPolling()
+        
+        // 双重保险：强制清理
+        setTimeout(() => {
+          const stillActive = getActivePollingKeys()
+          if (stillActive.length > 0) {
+            console.log('🚨 强制清理残留轮询:', stillActive)
+            forceStopAllPolling()
+          }
+        }, 100)
+      }
+      
+      console.log('✅ 认证状态清除时轮询清理完成')
+    } catch (e) {
+      console.warn('⚠️ 认证状态清除时轮询清理失败', e)
+    }
+    
+    // Cookie 模式：不需要广播，其他标签页会通过后端会话自然同步
     
     // 取消所有正在进行的请求
     resetCancelToken()
@@ -292,26 +376,50 @@ const actions = {
   // 获取当前用户信息
   async fetchCurrentUser() {
     try {
-      if (!state.accessToken) {
+      // 如果正在登出过程中，直接返回false
+      if (state.isLogoutInProgress) {
+        console.log('🚪 登出进行中，跳过用户信息获取')
         return false
       }
       
+      // 如果刚刚登出（5秒内），避免立即调用认证检查
+      const timeSinceLogout = Date.now() - state.lastLogoutTime
+      if (timeSinceLogout < 5000) {
+        console.log(`🚪 刚刚登出 ${timeSinceLogout}ms 前，跳过用户信息获取`)
+        return false
+      }
+      
+      // 双重检查：再次确认不在登出状态
+      if (state.isLogoutInProgress) {
+        console.log('🚪 双重检查：仍在登出状态，跳过用户信息获取')
+        return false
+      }
+      
+      console.log('🔍 开始获取当前用户信息')
       const response = await authAPI.getCurrentUser()
       
       // 成功判定：兼容 code === 0 或 code === 200
       const isSuccessCode = response && (response.code === 0 || response.code === 200)
       if (isSuccessCode && response.data) {
         this.setUser(response.data)
+        console.log('获取用户信息成功:', response.data.username, response.data.role)
         return true
       } else {
-        throw new Error('获取用户信息失败')
+        console.log('获取用户信息失败，无有效会话')
+        this.clearAuth()
+        return false
       }
     } catch (error) {
-      console.error('获取用户信息失败:', error)
-      // 如果是401错误，清除认证状态
-      if (error.code === 401) {
+      // 401/403 表示未登录或无权限，这是正常情况
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.log('当前无有效会话')
         this.clearAuth()
+        return false
       }
+      
+      // 其他错误才记录为错误
+      console.error('获取用户信息时发生错误:', error)
+      this.clearAuth()
       return false
     }
   },
@@ -326,6 +434,7 @@ const actions = {
       return false
     }
   },
+
   
 }
 

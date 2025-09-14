@@ -286,7 +286,7 @@
                 </div>
                 <div v-else class="screenshot-uploaded">
                   <img 
-                    :src="assignOrderData.screenshotUrl" 
+                    :src="getPreviewUrl(assignOrderData.screenshotUrl)" 
                     alt="派单图片"
                     class="screenshot-image"
                     @click="previewScreenshot"
@@ -349,7 +349,7 @@ import customerServiceStore from '../store/customerService'
 import authStore from '../store/auth'
 import * as csEmployeeMappingsAPI from '../api/csEmployeeMappings'
 import * as customerServiceAPI from '../api/customerService'
-import { showImagePreview } from '../utils/imageViewer'
+import { showImagePreview, getPreviewUrl } from '../utils/imageViewer'
 import { uploadImage, validateImageFile } from '../api/upload'
 import { usePolling, POLLING_CONFIG } from '../utils/polling'
 import EmployeeWorkRecords from '../components/EmployeeWorkRecords.vue'
@@ -411,6 +411,7 @@ export default {
     
     // 筛选后的员工列表
     const filteredEmployees = computed(() => {
+      console.log('filteredEmployees computed 被调用，employees.value:', employees.value)
       const filtered = !statusFilter.value 
         ? employees.value 
         : employees.value.filter(emp => emp.workStatus === statusFilter.value)
@@ -479,6 +480,15 @@ export default {
         // 确保用户信息已加载
         const currentUser = authStore.getters.currentUser.value
         if (!currentUser) {
+          // 检查是否正在登出或刚刚登出，避免无效的API调用
+          const { isLogoutInProgress, lastLogoutTime } = authStore.state
+          const timeSinceLogout = Date.now() - lastLogoutTime
+          
+          if (isLogoutInProgress || timeSinceLogout < 5000) {
+            console.log('🚪 正在登出或刚刚登出，跳过用户信息获取')
+            return
+          }
+          
           await authStore.actions.fetchCurrentUser()
         }
         
@@ -701,97 +711,42 @@ export default {
       // 使用智能轮询，只有数据变化时才更新UI
       startSmartPolling(
         'cs-employees',
-        // 数据获取函数 - 获取完整的员工数据包括状态信息
+        // 数据获取函数 - 只获取员工状态信息，不获取工单数据
         async () => {
-          console.log('轮询获取完整员工数据...')
+          console.log('轮询获取员工状态数据...')
           
-          // 获取当前用户ID
-          const userInfo = sessionStorage.getItem('user_info')
-          if (!userInfo) {
-            throw new Error('用户信息不存在')
+          // 直接使用 /api/cs/employees 接口获取员工状态
+          const response = await customerServiceAPI.getEmployees()
+          
+          if (response.code === 200 && Array.isArray(response.data)) {
+            console.log('轮询获取到的员工状态数据:', response.data)
+            return response.data
+          } else {
+            console.warn('员工状态接口返回异常:', response)
+            return []
           }
-          
-          const user = JSON.parse(userInfo)
-          const csUserId = user.id
-          
-          if (!csUserId) {
-            throw new Error('无法获取客服用户ID')
-          }
-          
-          // 1. 获取员工关系数据
-          const mappingsResponse = await csEmployeeMappingsAPI.getCsEmployeeMappings(csUserId)
-          
-          let mappingsData = []
-          if (mappingsResponse.code === 200 && mappingsResponse.data) {
-            mappingsData = mappingsResponse.data
-          } else if (Array.isArray(mappingsResponse)) {
-            mappingsData = mappingsResponse
-          } else if (mappingsResponse.data && Array.isArray(mappingsResponse.data)) {
-            mappingsData = mappingsResponse.data
-          }
-          
-          // 2. 获取员工详细状态信息（一次性获取所有员工数据，提高效率）
-          let employeeDetails = []
-          try {
-            const employeeResponse = await customerServiceAPI.getEmployees()
-            if (employeeResponse.code === 200 && Array.isArray(employeeResponse.data)) {
-              employeeDetails = employeeResponse.data
-            }
-          } catch (error) {
-            console.warn('获取员工详细信息失败:', error)
-          }
-          
-          // 3. 合并员工关系数据和详细状态信息
-          const employeeDataList = mappingsData.map(mapping => {
-            // 从员工详细信息中找到对应的员工
-            const employeeDetail = employeeDetails.find(emp => 
-              emp.id === mapping.employeeUserId || 
-              emp.userId === mapping.employeeUserId
-            )
-            
-            return {
-              id: mapping.employeeUserId || mapping.employeeId || 0,
-              name: mapping.employeeRealName || mapping.employeeUsername || '未知员工',
-              workStatus: employeeDetail?.workStatus || employeeDetail?.status || 'OFF_DUTY',
-              gender: employeeDetail?.gender || 'MALE',
-              game: employeeDetail?.game || '未设置',
-              level: employeeDetail?.level || '未设置',
-              todayOrders: employeeDetail?.todayOrders || 0,
-              totalOrders: employeeDetail?.totalOrders || 0,
-              rating: employeeDetail?.rating || 0,
-              avatar: employeeDetail?.avatar || '',
-              // 保留关系信息
-              mappingId: mapping.id,
-              csUserId: mapping.csUserId,
-              employeeUserId: mapping.employeeUserId,
-              employeeUsername: mapping.employeeUsername,
-              employeeRealName: mapping.employeeRealName,
-              createdAt: mapping.createdAt,
-              updatedAt: mapping.updatedAt
-            }
-          })
-          console.log('轮询获取到的完整员工数据:', employeeDataList)
-          
-          return employeeDataList
         },
         // 数据变化时的回调 - 只有在检测到变化时才更新store
         (newData, oldData, changes) => {
-          console.log('检测到员工列表数据变化，更新store')
+          console.log('检测到员工状态数据变化，更新UI')
           if (changes && changes.length > 0) {
-            console.log('员工变化详情:', changes)
+            console.log('员工状态变化详情:', changes)
             // 只在有实际变化时显示通知，避免过多提示
             if (changes.length <= 3) {
-              ElMessage.info(`员工数据已更新`)
+              ElMessage.info(`员工状态已更新`)
             }
           }
           
-          // 只有在检测到变化时才更新store
-          customerServiceStore.actions.updateEmployeeListFromPolling(newData)
+          // 直接调用store方法更新员工状态数据
+          if (Array.isArray(newData)) {
+            console.log('轮询获取到的新状态数据:', newData)
+            customerServiceStore.actions.updateEmployeeStatusFromPolling(newData)
+          }
         },
         interval
       )
       
-      console.log(`开始智能轮询员工列表，间隔: ${POLLING_CONFIG.CS_EMPLOYEES}秒`)
+      console.log(`开始智能轮询员工状态，间隔: ${POLLING_CONFIG.CS_EMPLOYEES}秒`)
     }
     
     // 停止轮询员工列表
@@ -851,6 +806,7 @@ export default {
       handleScreenshotChange,
       removeScreenshot,
       previewScreenshot,
+      getPreviewUrl,
       handleDragOver,
       handleDragLeave,
       handleDrop,

@@ -46,7 +46,6 @@
         <el-button
           :icon="Refresh"
           @click="refreshData"
-          :loading="isRefreshing"
         >
           刷新
         </el-button>
@@ -203,6 +202,7 @@ import {
 import customerServiceStore from '../store/customerService'
 import authStore from '../store/auth'
 import { getGameSkillsByProfileId } from '../api/gameSkills'
+import { getProfileForUser } from '../api/employee'
 import { getCsEmployeeMappings } from '../api/csEmployeeMappings'
 import { getEmployeeProfile, getEmployees } from '../api/customerService'
 import EmployeePersonalStatus from '../components/EmployeePersonalStatus.vue'
@@ -370,8 +370,8 @@ export default {
           getEmployees()
         ])
         
-        // 获取员工的profile信息以获取profileId
-        const profileResponse = await getEmployeeProfile(employeeId.value)
+        // 获取员工的profile信息（通过 X-User-Id）以获取profileId
+        const profileResponse = await getProfileForUser(employeeId.value)
         let gameSkillsResponse = { code: 404, data: [] }
         
         if (profileResponse.code === 200 && profileResponse.data?.id) {

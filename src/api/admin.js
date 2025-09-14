@@ -6,6 +6,7 @@ import http from './http'
  * @param {Object} userData - 用户数据
  * @param {string} userData.username - 用户名（必填）
  * @param {string} userData.realName - 真实姓名（必填）
+ * @param {string} userData.phone - 电话号码（可选）
  * @param {string} userData.role - 角色（可选值：ADMIN,CS,EMPLOYEE，默认为CS）
  * @param {boolean} userData.isActive - 是否激活（可选，管理员创建的用户默认为true）
  * @param {string} userData.lastLogin - 最后登录时间（可选）
@@ -21,6 +22,7 @@ export const createUser = async (userData) => {
       id: 0, // 新建用户时ID为0
       username: userData.username,
       realName: userData.realName,
+      phone: userData.phone || "", // 电话号码（可选）
       role: userData.role || 'CS', // 默认角色为客服
       isActive: userData.isActive !== undefined ? userData.isActive : true, // 管理员创建的用户默认激活
       lastLogin: userData.lastLogin || "", // 新建用户时为空
@@ -60,8 +62,8 @@ export const createUser = async (userData) => {
 }
 
 /**
- * 获取用户列表
- * @returns {Promise} 用户列表
+ * 获取用户列表（包含员工状态信息）
+ * @returns {Promise} 用户列表，包含workStatus和gender字段
  */
 export const getUsers = async () => {
   try {
@@ -75,12 +77,15 @@ export const getUsers = async () => {
     //       id: 0,
     //       username: "",
     //       realName: "",
-    //       role: "",
+    //       phone: "",
+    //       role: "ADMIN|CS|EMPLOYEE",
     //       isActive: true,
     //       lastLogin: "",
     //       createdAt: "",
     //       updatedAt: "",
-    //       deleted: 0
+    //       deleted: 0,
+    //       workStatus: "IDLE|BUSY|RESTING|OFF_DUTY",
+    //       gender: "MALE|FEMALE"
     //     }
     //   ],
     //   timestamp: "",
@@ -99,8 +104,11 @@ export const getUsers = async () => {
  * @param {Object} userData - 更新数据
  * @param {string} userData.username - 用户名（必填）
  * @param {string} userData.realName - 真实姓名（必填）
+ * @param {string} userData.phone - 电话号码（可选）
  * @param {string} userData.role - 角色（可选值：ADMIN,CS,EMPLOYEE）
  * @param {boolean} userData.isActive - 是否激活（可选）
+ * @param {string} userData.workStatus - 工作状态（可选值：IDLE,BUSY,RESTING,OFF_DUTY）
+ * @param {string} userData.gender - 性别（可选值：MALE,FEMALE）
  * @param {string} userData.lastLogin - 最后登录时间（可选）
  * @param {string} userData.createdAt - 创建时间（可选）
  * @param {string} userData.updatedAt - 更新时间（可选）

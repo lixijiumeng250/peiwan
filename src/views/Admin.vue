@@ -69,7 +69,6 @@
                 <el-button
                   :icon="Refresh"
                   @click="() => refreshEmployeeList(true)"
-                  :loading="isLoadingEmployees"
                 >
                   刷新
                 </el-button>
@@ -135,6 +134,10 @@
 
                   <div class="card-body">
                     <div class="info-row">
+                      <span class="label">电话:</span>
+                      <span class="value">{{ employee.phone || '未填写' }}</span>
+                    </div>
+                    <div class="info-row">
                       <span class="label">性别:</span>
                       <span class="value">{{ getGenderText(employee.gender) }}</span>
                     </div>
@@ -182,32 +185,61 @@
                   </el-button>
                 </div>
                 
-                <el-table :data="customerServices" stripe style="width: 100%">
-                  <el-table-column prop="username" label="用户名" width="120" />
-                  <el-table-column prop="realName" label="真实姓名" width="120" />
-                  <el-table-column label="管理员工" width="150">
+                <el-table 
+                  :data="customerServices" 
+                  stripe 
+                  style="width: 100%" 
+                  :header-cell-style="{ background: '#f5f7fa', color: '#606266', fontWeight: '600' }"
+                  :row-style="{ height: '50px' }"
+                  class="custom-table"
+                  :max-height="400"
+                  :scrollbar-always-on="true"
+                >
+                  <el-table-column prop="username" label="用户名" min-width="120" show-overflow-tooltip />
+                  <el-table-column prop="realName" label="真实姓名" min-width="120" show-overflow-tooltip />
+                  <el-table-column prop="phone" label="电话号码" min-width="140" show-overflow-tooltip>
+                    <template #default="scope">
+                      <span :class="{ 'text-muted': !scope.row.phone }">{{ scope.row.phone || '未填写' }}</span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="管理员工" min-width="150" align="center">
                     <template #default="scope">
                       <el-button 
                         size="small" 
                         @click="showManagedEmployees(scope.row)"
-                        type="text"
+                        type="primary"
+                        text
+                        class="employee-count-btn"
                       >
+                        <el-icon><User /></el-icon>
                         {{ getManagedEmployeeCount(scope.row.id) }}名员工
                       </el-button>
                     </template>
                   </el-table-column>
-                  <el-table-column label="操作" width="150">
+                  <el-table-column label="操作" min-width="150" align="center" fixed="right">
                     <template #default="scope">
-                      <el-button size="small" @click="editCustomerService(scope.row)">
+                      <div class="table-actions">
+                        <el-button 
+                          size="small" 
+                          type="primary" 
+                          text 
+                          @click="editCustomerService(scope.row)"
+                          class="action-btn"
+                        >
+                          <el-icon><Edit /></el-icon>
                         编辑
                       </el-button>
                       <el-button 
                         size="small" 
                         type="danger" 
+                          text
                         @click="deleteCustomerService(scope.row)"
+                          class="action-btn danger"
                       >
+                          <el-icon><Delete /></el-icon>
                         删除
                       </el-button>
+                      </div>
                     </template>
                   </el-table-column>
                 </el-table>
@@ -219,26 +251,69 @@
                   <h3>员工列表</h3>
                 </div>
                 
-                <el-table :data="allEmployees" stripe style="width: 100%">
-                  <el-table-column prop="username" label="用户名" width="120" />
-                  <el-table-column prop="realName" label="真实姓名" width="120" />
-                  <el-table-column label="所属客服" width="150">
+                <el-table 
+                  :data="allEmployees" 
+                  stripe 
+                  style="width: 100%" 
+                  :header-cell-style="{ background: '#f5f7fa', color: '#606266', fontWeight: '600' }"
+                  :row-style="{ height: '50px' }"
+                  class="custom-table"
+                  :max-height="400"
+                  :scrollbar-always-on="true"
+                >
+                  <el-table-column prop="username" label="用户名" min-width="120" show-overflow-tooltip />
+                  <el-table-column prop="realName" label="真实姓名" min-width="120" show-overflow-tooltip />
+                  <el-table-column prop="phone" label="电话号码" min-width="140" show-overflow-tooltip>
                     <template #default="scope">
-                      <span>{{ getEmployeeCsName(scope.row.id) }}</span>
+                      <span :class="{ 'text-muted': !scope.row.phone }">{{ scope.row.phone || '未填写' }}</span>
                     </template>
                   </el-table-column>
-                  <el-table-column label="操作" width="150">
+                  <el-table-column label="所属客服" min-width="200" show-overflow-tooltip>
                     <template #default="scope">
-                      <el-button size="small" @click="editEmployee(scope.row)">
+                      <div class="cs-tags-container">
+                        <template v-if="getEmployeeCsList(scope.row.id).length > 0">
+                          <el-tag 
+                            v-for="cs in getEmployeeCsList(scope.row.id)"
+                            :key="cs.id"
+                            type="success" 
+                            size="small"
+                            class="cs-tag"
+                          >
+                            <el-icon><Service /></el-icon>
+                            {{ cs.realName }}
+                          </el-tag>
+                        </template>
+                        <el-tag v-else type="warning" size="small" class="cs-tag">
+                          <el-icon><Warning /></el-icon>
+                          未分配
+                        </el-tag>
+                      </div>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="操作" min-width="150" align="center" fixed="right">
+                    <template #default="scope">
+                      <div class="table-actions">
+                        <el-button 
+                          size="small" 
+                          type="primary" 
+                          text 
+                          @click="editEmployee(scope.row)"
+                          class="action-btn"
+                        >
+                          <el-icon><Edit /></el-icon>
                         编辑
                       </el-button>
                       <el-button 
                         size="small" 
                         type="danger" 
+                          text
                         @click="deleteEmployee(scope.row)"
+                          class="action-btn danger"
                       >
+                          <el-icon><Delete /></el-icon>
                         删除
                       </el-button>
+                      </div>
                     </template>
                   </el-table-column>
                 </el-table>
@@ -262,7 +337,6 @@
                 <el-button
                   :icon="Refresh"
                   @click="() => refreshMappings(true)"
-                  :loading="isLoadingMappings"
                 >
                   刷新
                 </el-button>
@@ -324,39 +398,163 @@
           <el-input 
             v-model="customerServiceFormData.gameNickname" 
             placeholder="请输入游戏昵称（登录用户名）"
-            @blur="checkUsernameAvailability('customerService')"
-          />
-          <div class="form-hint">此昵称将作为客服的登录用户名，请确保唯一</div>
+            @blur="checkUsernameAvailabilityForCS"
+            :class="usernameValidationStatus.cs.class"
+          >
+            <template #suffix>
+              <el-icon v-if="usernameValidationStatus.cs.loading" class="is-loading">
+                <Loading />
+              </el-icon>
+              <el-icon v-else-if="usernameValidationStatus.cs.status === 'success'" class="success-icon">
+                <Check />
+              </el-icon>
+              <el-icon v-else-if="usernameValidationStatus.cs.status === 'error'" class="error-icon">
+                <Close />
+              </el-icon>
+            </template>
+          </el-input>
+          <div class="form-hint" :class="usernameValidationStatus.cs.hintClass">
+            {{ usernameValidationStatus.cs.message || '此昵称将作为客服的登录用户名，请确保唯一' }}
+          </div>
+        </el-form-item>
+        <el-form-item label="电话号码" prop="phone">
+          <el-input 
+            v-model="customerServiceFormData.phone" 
+            placeholder="请输入电话号码（可选）"
+            maxlength="20"
+            @blur="checkPhoneAvailabilityForCS"
+            :prefix-icon="phoneValidationStatus.cs.icon"
+            :class="phoneValidationStatus.cs.class"
+          >
+            <template #suffix>
+              <el-icon v-if="phoneValidationStatus.cs.loading" class="is-loading">
+                <Loading />
+              </el-icon>
+              <el-icon v-else-if="phoneValidationStatus.cs.status === 'success'" class="success-icon">
+                <Check />
+              </el-icon>
+              <el-icon v-else-if="phoneValidationStatus.cs.status === 'error'" class="error-icon">
+                <Close />
+              </el-icon>
+            </template>
+          </el-input>
+          <div class="form-hint" :class="phoneValidationStatus.cs.hintClass">
+            {{ phoneValidationStatus.cs.message || '请输入有效的电话号码，便于联系' }}
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="addCustomerServiceVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleAddCustomerService" :loading="submitting">确定</el-button>
+        <el-button type="primary" @click="handleAddCustomerService">确定</el-button>
       </template>
     </el-dialog>
 
     <!-- 管理的员工列表对话框 -->
-    <el-dialog v-model="managedEmployeesVisible" title="管理的员工列表" width="600px">
-      <div v-if="currentCustomerService">
-        <h4>{{ currentCustomerService.realName }} 管理的员工</h4>
-        <el-table :data="employees" stripe style="width: 100%">
-          <el-table-column prop="username" label="用户名" width="120" />
-          <el-table-column prop="realName" label="真实姓名" width="120" />
-          <el-table-column prop="game" label="擅长游戏" width="150" />
-          <el-table-column label="状态" width="100">
+    <el-dialog 
+      v-model="managedEmployeesVisible" 
+      :title="`${currentCustomerService?.realName || '客服'} 管理的员工`" 
+      width="800px"
+      class="managed-employees-dialog"
+    >
+      <div v-if="currentCustomerService" class="managed-employees-content">
+        <!-- 客服信息卡片 -->
+        <div class="cs-info-card">
+          <div class="cs-avatar">
+            <el-avatar :size="60" class="cs-avatar-img">
+              {{ currentCustomerService.realName?.charAt(0) || 'C' }}
+            </el-avatar>
+          </div>
+          <div class="cs-details">
+            <h3 class="cs-name">{{ currentCustomerService.realName }}</h3>
+            <p class="cs-username">用户名: {{ currentCustomerService.username }}</p>
+            <p class="cs-phone">电话: {{ currentCustomerService.phone || '未填写' }}</p>
+          </div>
+          <div class="cs-stats">
+            <el-statistic 
+              title="管理员工" 
+              :value="managedEmployees.length" 
+              suffix="人"
+              class="stat-item"
+            >
+              <template #prefix>
+                <el-icon><User /></el-icon>
+              </template>
+            </el-statistic>
+          </div>
+        </div>
+
+        <!-- 员工列表 -->
+        <div class="employees-list-section">
+          <el-table 
+            :data="managedEmployees" 
+            stripe 
+            style="width: 100%"
+            v-loading="isLoadingManagedEmployees"
+            :header-cell-style="{ background: '#f5f7fa', color: '#606266', fontWeight: '600' }"
+            :row-style="{ height: '55px' }"
+            class="managed-employees-table"
+          >
+            <el-table-column prop="username" label="用户名" min-width="120" show-overflow-tooltip />
+            <el-table-column prop="realName" label="真实姓名" min-width="120" show-overflow-tooltip />
+            <el-table-column prop="phone" label="电话号码" min-width="140" show-overflow-tooltip>
             <template #default="scope">
-              <el-tag :type="getStatusTagType(scope.row.workStatus)" size="small">
+                <span :class="{ 'text-muted': scope.row.phone === '未填写' }">
+                  {{ scope.row.phone }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="工作状态" min-width="100" align="center">
+              <template #default="scope">
+                <el-tag 
+                  :type="getStatusTagType(scope.row.workStatus)" 
+                  size="small"
+                  class="status-tag"
+                >
                 {{ getStatusText(scope.row.workStatus) }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="100">
+            <el-table-column label="性别" min-width="80" align="center">
             <template #default="scope">
-              <el-button size="small" @click="viewEmployeeDetail(scope.row)">详情</el-button>
+                <el-tag 
+                  :type="scope.row.gender === 'MALE' ? 'primary' : 'danger'" 
+                  size="small"
+                  plain
+                >
+                  {{ getGenderText(scope.row.gender) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" min-width="120" align="center" fixed="right">
+              <template #default="scope">
+                <div class="table-actions">
+                  <el-button 
+                    size="small" 
+                    type="primary"
+                    text
+                    @click="viewEmployeeDetail(scope.row)"
+                    class="action-btn"
+                  >
+                    <el-icon><View /></el-icon>
+                    详情
+                  </el-button>
+                </div>
             </template>
           </el-table-column>
         </el-table>
+
+          <!-- 空状态 -->
+          <el-empty 
+            v-if="!isLoadingManagedEmployees && managedEmployees.length === 0"
+            description="该客服暂未分配员工"
+            :image-size="120"
+          />
       </div>
+      </div>
+      
+      <template #footer>
+        <el-button @click="managedEmployeesVisible = false">关闭</el-button>
+      </template>
     </el-dialog>
 
     <!-- 编辑员工对话框 -->
@@ -371,13 +569,56 @@
           <el-input v-model="editEmployeeFormData.realName" placeholder="请输入真实姓名" />
         </el-form-item>
         <el-form-item label="游戏昵称" prop="username">
-          <el-input v-model="editEmployeeFormData.username" placeholder="请输入游戏昵称（登录用户名）" />
-          <div class="form-hint">此昵称将作为员工的登录用户名，请确保唯一</div>
+          <el-input 
+            v-model="editEmployeeFormData.username" 
+            placeholder="请输入游戏昵称（登录用户名）"
+            @blur="checkUsernameAvailabilityForEmployee"
+            :class="usernameValidationStatus.employee.class"
+          >
+            <template #suffix>
+              <el-icon v-if="usernameValidationStatus.employee.loading" class="is-loading">
+                <Loading />
+              </el-icon>
+              <el-icon v-else-if="usernameValidationStatus.employee.status === 'success'" class="success-icon">
+                <Check />
+              </el-icon>
+              <el-icon v-else-if="usernameValidationStatus.employee.status === 'error'" class="error-icon">
+                <Close />
+              </el-icon>
+            </template>
+          </el-input>
+          <div class="form-hint" :class="usernameValidationStatus.employee.hintClass">
+            {{ usernameValidationStatus.employee.message || '此昵称将作为员工的登录用户名，请确保唯一' }}
+          </div>
+        </el-form-item>
+        <el-form-item label="电话号码" prop="phone">
+          <el-input 
+            v-model="editEmployeeFormData.phone" 
+            placeholder="请输入电话号码（可选）"
+            maxlength="20"
+            @blur="checkPhoneAvailabilityForEmployee"
+            :class="phoneValidationStatus.employee.class"
+          >
+            <template #suffix>
+              <el-icon v-if="phoneValidationStatus.employee.loading" class="is-loading">
+                <Loading />
+              </el-icon>
+              <el-icon v-else-if="phoneValidationStatus.employee.status === 'success'" class="success-icon">
+                <Check />
+              </el-icon>
+              <el-icon v-else-if="phoneValidationStatus.employee.status === 'error'" class="error-icon">
+                <Close />
+              </el-icon>
+            </template>
+          </el-input>
+          <div class="form-hint" :class="phoneValidationStatus.employee.hintClass">
+            {{ phoneValidationStatus.employee.message || '请输入有效的电话号码，便于联系' }}
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="editEmployeeVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleEditEmployee" :loading="submitting">确定</el-button>
+        <el-button type="primary" @click="handleEditEmployee">确定</el-button>
       </template>
     </el-dialog>
 
@@ -393,13 +634,56 @@
           <el-input v-model="editCustomerServiceFormData.realName" placeholder="请输入真实姓名" />
         </el-form-item>
         <el-form-item label="游戏昵称" prop="username">
-          <el-input v-model="editCustomerServiceFormData.username" placeholder="请输入游戏昵称（登录用户名）" />
-          <div class="form-hint">此昵称将作为客服的登录用户名，请确保唯一</div>
+          <el-input 
+            v-model="editCustomerServiceFormData.username" 
+            placeholder="请输入游戏昵称（登录用户名）"
+            @blur="checkUsernameAvailabilityForEditCS"
+            :class="usernameValidationStatus.editCS.class"
+          >
+            <template #suffix>
+              <el-icon v-if="usernameValidationStatus.editCS.loading" class="is-loading">
+                <Loading />
+              </el-icon>
+              <el-icon v-else-if="usernameValidationStatus.editCS.status === 'success'" class="success-icon">
+                <Check />
+              </el-icon>
+              <el-icon v-else-if="usernameValidationStatus.editCS.status === 'error'" class="error-icon">
+                <Close />
+              </el-icon>
+            </template>
+          </el-input>
+          <div class="form-hint" :class="usernameValidationStatus.editCS.hintClass">
+            {{ usernameValidationStatus.editCS.message || '此昵称将作为客服的登录用户名，请确保唯一' }}
+          </div>
+        </el-form-item>
+        <el-form-item label="电话号码" prop="phone">
+          <el-input 
+            v-model="editCustomerServiceFormData.phone" 
+            placeholder="请输入电话号码（可选）"
+            maxlength="20"
+            @blur="checkPhoneAvailabilityForEditCS"
+            :class="phoneValidationStatus.editCS.class"
+          >
+            <template #suffix>
+              <el-icon v-if="phoneValidationStatus.editCS.loading" class="is-loading">
+                <Loading />
+              </el-icon>
+              <el-icon v-else-if="phoneValidationStatus.editCS.status === 'success'" class="success-icon">
+                <Check />
+              </el-icon>
+              <el-icon v-else-if="phoneValidationStatus.editCS.status === 'error'" class="error-icon">
+                <Close />
+              </el-icon>
+            </template>
+          </el-input>
+          <div class="form-hint" :class="phoneValidationStatus.editCS.hintClass">
+            {{ phoneValidationStatus.editCS.message || '请输入有效的电话号码，便于联系' }}
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="editCustomerServiceVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleEditCustomerService" :loading="submitting">确定</el-button>
+        <el-button type="primary" @click="handleEditCustomerService">确定</el-button>
       </template>
     </el-dialog>
 
@@ -659,7 +943,7 @@
                 </div>
                 <div v-else class="screenshot-uploaded">
                   <img 
-                    :src="assignOrderData.screenshotUrl" 
+                    :src="getPreviewUrl(assignOrderData.screenshotUrl)" 
                     alt="派单图片"
                     class="screenshot-image"
                     @click="previewScreenshot"
@@ -708,7 +992,14 @@ import {
   UserFilled,
   Refresh,
   Upload,
-  Plus
+  Plus,
+  Warning,
+  Edit,
+  Delete,
+  Loading,
+  Check,
+  Close,
+  View
 } from '@element-plus/icons-vue'
 import customerServiceStore from '../store/customerService'
 import adminStore from '../store/admin'
@@ -724,9 +1015,10 @@ import {
   batchCreateCSEmployeeMappings as batchCreateCsEmployeeMappings,
   reassignEmployee as reassignEmployeeApi
 } from '../api/csEmployeeMappings'
-import { showImagePreview } from '../utils/imageViewer'
+import { showImagePreview, getPreviewUrl } from '../utils/imageViewer'
 import { uploadImage, validateImageFile } from '../api/upload'
 import { usePolling, POLLING_CONFIG } from '../utils/polling'
+import { checkPhoneAvailability, checkUsernameAvailability as checkUsernameAPI } from '../api/auth'
 
 export default {
   name: 'Admin',
@@ -736,7 +1028,14 @@ export default {
     UserFilled,
     Refresh,
     Upload,
-    Plus
+    Plus,
+    Warning,
+    Edit,
+    Delete,
+    Loading,
+    Check,
+    Close,
+    View
   },
   setup() {
     const router = useRouter()
@@ -771,8 +1070,11 @@ export default {
     
     // 客服员工关系数据
     const csEmployeeMappings = ref([])
-    // 员工卡片展示数据（按客服页面逻辑：关系 + /cs/employees enrich）
+    // 员工卡片展示数据（管理员直接从用户数据获取，不调用客服API）
     const cardEmployees = ref([])
+    // 当前客服管理的员工列表
+    const managedEmployees = ref([])
+    const isLoadingManagedEmployees = ref(false)
     
     // 使用admin store的数据
     const users = computed(() => {
@@ -795,19 +1097,22 @@ export default {
     const editEmployeeFormData = reactive({
       id: null,
       realName: '',
-      username: ''
+      username: '',
+      phone: ''
     })
     
     const customerServiceFormData = reactive({
       realName: '',
-      gameNickname: ''
+      gameNickname: '',
+      phone: ''
     })
     
     // 编辑客服表单数据
     const editCustomerServiceFormData = reactive({
       id: null,
       realName: '',
-      username: ''
+      username: '',
+      phone: ''
     })
     
     // 关系表单数据
@@ -835,12 +1140,69 @@ export default {
       newCsUserId: null
     })
     
+    // 手机号验证状态
+    const phoneValidationStatus = reactive({
+      cs: {
+        loading: false,
+        status: '', // 'success', 'error', ''
+        message: '',
+        class: '',
+        hintClass: ''
+      },
+      employee: {
+        loading: false,
+        status: '',
+        message: '',
+        class: '',
+        hintClass: ''
+      },
+      editCS: {
+        loading: false,
+        status: '',
+        message: '',
+        class: '',
+        hintClass: ''
+      }
+    })
+    
+    // 用户名验证状态
+    const usernameValidationStatus = reactive({
+      cs: {
+        loading: false,
+        status: '', // 'success', 'error', ''
+        message: '',
+        class: '',
+        hintClass: ''
+      },
+      employee: {
+        loading: false,
+        status: '',
+        message: '',
+        class: '',
+        hintClass: ''
+      },
+      editCS: {
+        loading: false,
+        status: '',
+        message: '',
+        class: '',
+        hintClass: ''
+      }
+    })
+    
     // 表单验证规则
     const customerServiceFormRules = {
       realName: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
       gameNickname: [
         { required: true, message: '请输入游戏昵称', trigger: 'blur' },
         { min: 2, max: 20, message: '游戏昵称长度在 2 到 20 个字符', trigger: 'blur' }
+      ],
+      phone: [
+        { 
+          pattern: /^1[3-9]\d{9}$|^(\+86)?1[3-9]\d{9}$|^(\d{3,4}-?)?\d{7,8}$/,
+          message: '请输入有效的电话号码',
+          trigger: 'blur'
+        }
       ]
     }
     
@@ -849,6 +1211,13 @@ export default {
       username: [
         { required: true, message: '请输入游戏昵称', trigger: 'blur' },
         { min: 2, max: 20, message: '游戏昵称长度在 2 到 20 个字符', trigger: 'blur' }
+      ],
+      phone: [
+        { 
+          pattern: /^1[3-9]\d{9}$|^(\+86)?1[3-9]\d{9}$|^(\d{3,4}-?)?\d{7,8}$/,
+          message: '请输入有效的电话号码',
+          trigger: 'blur'
+        }
       ]
     }
     
@@ -857,6 +1226,13 @@ export default {
       username: [
         { required: true, message: '请输入游戏昵称', trigger: 'blur' },
         { min: 2, max: 20, message: '游戏昵称长度在 2 到 20 个字符', trigger: 'blur' }
+      ],
+      phone: [
+        { 
+          pattern: /^1[3-9]\d{9}$|^(\+86)?1[3-9]\d{9}$|^(\d{3,4}-?)?\d{7,8}$/,
+          message: '请输入有效的电话号码',
+          trigger: 'blur'
+        }
       ]
     }
     
@@ -1168,8 +1544,28 @@ export default {
     const showAddCustomerServiceDialog = () => {
       Object.assign(customerServiceFormData, {
         realName: '',
-        gameNickname: ''
+        gameNickname: '',
+        phone: ''
       })
+      
+      // 重置手机号验证状态
+      phoneValidationStatus.cs = {
+        loading: false,
+        status: '',
+        message: '',
+        class: '',
+        hintClass: ''
+      }
+      
+      // 重置用户名验证状态
+      usernameValidationStatus.cs = {
+        loading: false,
+        status: '',
+        message: '',
+        class: '',
+        hintClass: ''
+      }
+      
       addCustomerServiceVisible.value = true
     }
     
@@ -1200,16 +1596,47 @@ export default {
           return
         }
         
-        // 检查用户名是否重复
-        const isUsernameAvailable = await checkUsernameAvailability('customerService')
-        if (isUsernameAvailable === false) {
+        // 检查用户名验证状态
+        if (usernameValidationStatus.cs.status === 'error') {
+          ElMessage.error('请修正用户名错误后再提交')
           return
+        }
+        
+        // 如果用户名还没有验证过，先进行验证
+        if (usernameValidationStatus.cs.status === '') {
+          await checkUsernameAvailabilityForCS()
+          // 验证后再次检查状态
+          if (usernameValidationStatus.cs.status === 'error') {
+            ElMessage.error('用户名验证失败，请检查后重试')
+            return
+          }
+        }
+        
+        // 检查手机号验证状态
+        const phone = customerServiceFormData.phone?.trim()
+        if (phone) {
+          // 如果有手机号，检查验证状态
+          if (phoneValidationStatus.cs.status === 'error') {
+            ElMessage.error(phoneValidationStatus.cs.message || '请修正手机号错误后再提交')
+            return
+          }
+          
+          // 如果手机号还没有验证过，先进行验证
+          if (phoneValidationStatus.cs.status === '') {
+            await checkPhoneAvailabilityForCS()
+            // 验证后再次检查状态
+            if (phoneValidationStatus.cs.status === 'error') {
+              ElMessage.error('手机号验证失败，请检查后重试')
+              return
+            }
+          }
         }
         
         // 构建符合API文档要求的用户数据
         const userData = {
           username: customerServiceFormData.gameNickname.trim(), // 游戏昵称作为用户名（必填）
           realName: customerServiceFormData.realName.trim(), // 真实姓名（必填）
+          phone: customerServiceFormData.phone.trim() || '', // 电话号码（可选）
           role: 'CS', // 角色固定为客服
           isActive: true, // 管理员创建的用户默认为激活状态
           lastLogin: '', // 新建用户最后登录时间为空
@@ -1227,7 +1654,8 @@ export default {
           // 重置表单
           Object.assign(customerServiceFormData, {
             realName: '',
-            gameNickname: ''
+            gameNickname: '',
+            phone: ''
           })
           
           ElMessage.success(result.message || '客服用户创建成功，默认密码为123456，用户已激活')
@@ -1250,9 +1678,60 @@ export default {
       }
     }
     
-    const showManagedEmployees = (customerService) => {
+    // 获取客服管理的员工列表
+    const fetchManagedEmployees = async (csUserId) => {
+      isLoadingManagedEmployees.value = true
+      try {
+        console.log('获取客服管理的员工列表，客服ID:', csUserId)
+        const response = await getCsEmployeeMappings()
+        console.log('客服员工关系响应:', response)
+        
+        if (response.code === 200 && response.data) {
+          // 过滤出指定客服管理的员工
+          const csEmployeeRelations = response.data.filter(mapping => mapping.csUserId === csUserId)
+          console.log('该客服管理的关系:', csEmployeeRelations)
+          
+          // 从用户列表中获取员工详细信息
+          const employeeDetails = csEmployeeRelations.map(relation => {
+            const employee = users.value.find(user => user.id === relation.employeeUserId)
+            if (employee) {
+              return {
+                id: employee.id,
+                username: employee.username,
+                realName: employee.realName,
+                phone: employee.phone || '未填写',
+                workStatus: employee.workStatus || 'OFF_DUTY',
+                gender: employee.gender || 'MALE',
+                game: '未设置', // 可以后续从其他接口获取
+                level: '未设置',
+                createdAt: relation.createdAt,
+                updatedAt: relation.updatedAt
+              }
+            }
+            return null
+          }).filter(Boolean)
+          
+          managedEmployees.value = employeeDetails
+          console.log('管理的员工详细信息:', employeeDetails)
+        } else {
+          console.error('获取客服员工关系失败:', response.message)
+          managedEmployees.value = []
+        }
+      } catch (error) {
+        console.error('获取客服管理的员工失败:', error)
+        managedEmployees.value = []
+        ElMessage.error('获取员工列表失败')
+      } finally {
+        isLoadingManagedEmployees.value = false
+      }
+    }
+
+    const showManagedEmployees = async (customerService) => {
       currentCustomerService.value = customerService
       managedEmployeesVisible.value = true
+      
+      // 获取该客服管理的员工列表
+      await fetchManagedEmployees(customerService.id)
     }
     
     const editCustomerService = (customerService) => {
@@ -1260,8 +1739,27 @@ export default {
       Object.assign(editCustomerServiceFormData, {
         id: customerService.id,
         realName: customerService.realName,
-        username: customerService.username
+        username: customerService.username,
+        phone: customerService.phone || ''
       })
+      
+      // 重置手机号验证状态
+      phoneValidationStatus.editCS = {
+        loading: false,
+        status: '',
+        message: '',
+        class: '',
+        hintClass: ''
+      }
+      
+      // 重置用户名验证状态
+      usernameValidationStatus.editCS = {
+        loading: false,
+        status: '',
+        message: '',
+        class: '',
+        hintClass: ''
+      }
       
       editCustomerServiceVisible.value = true
     }
@@ -1270,10 +1768,47 @@ export default {
       try {
         submitting.value = true
         
+        // 检查用户名验证状态
+        if (usernameValidationStatus.editCS.status === 'error') {
+          ElMessage.error('请修正用户名错误后再提交')
+          return
+        }
+        
+        // 如果用户名还没有验证过，先进行验证
+        if (usernameValidationStatus.editCS.status === '') {
+          await checkUsernameAvailabilityForEditCS()
+          // 验证后再次检查状态
+          if (usernameValidationStatus.editCS.status === 'error') {
+            ElMessage.error('用户名验证失败，请检查后重试')
+            return
+          }
+        }
+        
+        // 检查手机号验证状态
+        const phone = editCustomerServiceFormData.phone?.trim()
+        if (phone) {
+          // 如果有手机号，检查验证状态
+          if (phoneValidationStatus.editCS.status === 'error') {
+            ElMessage.error(phoneValidationStatus.editCS.message || '请修正手机号错误后再提交')
+            return
+          }
+          
+          // 如果手机号还没有验证过，先进行验证
+          if (phoneValidationStatus.editCS.status === '') {
+            await checkPhoneAvailabilityForEditCS()
+            // 验证后再次检查状态
+            if (phoneValidationStatus.editCS.status === 'error') {
+              ElMessage.error('手机号验证失败，请检查后重试')
+              return
+            }
+          }
+        }
+        
         // 使用admin store更新客服
         const updateData = {
           username: editCustomerServiceFormData.username,
           realName: editCustomerServiceFormData.realName,
+          phone: editCustomerServiceFormData.phone || '',
           role: 'CS',
           isActive: true
         }
@@ -1288,7 +1823,8 @@ export default {
           Object.assign(editCustomerServiceFormData, {
             id: null,
             realName: '',
-            username: ''
+            username: '',
+            phone: ''
           })
         } else {
           ElMessage.error(result.message || '修改失败')
@@ -1330,8 +1866,27 @@ export default {
       Object.assign(editEmployeeFormData, {
         id: employee.id,
         realName: employee.realName,
-        username: employee.username
+        username: employee.username,
+        phone: employee.phone || ''
       })
+      
+      // 重置手机号验证状态
+      phoneValidationStatus.employee = {
+        loading: false,
+        status: '',
+        message: '',
+        class: '',
+        hintClass: ''
+      }
+      
+      // 重置用户名验证状态
+      usernameValidationStatus.employee = {
+        loading: false,
+        status: '',
+        message: '',
+        class: '',
+        hintClass: ''
+      }
       
       editEmployeeVisible.value = true
     }
@@ -1340,10 +1895,47 @@ export default {
       try {
         submitting.value = true
         
+        // 检查用户名验证状态
+        if (usernameValidationStatus.employee.status === 'error') {
+          ElMessage.error('请修正用户名错误后再提交')
+          return
+        }
+        
+        // 如果用户名还没有验证过，先进行验证
+        if (usernameValidationStatus.employee.status === '') {
+          await checkUsernameAvailabilityForEmployee()
+          // 验证后再次检查状态
+          if (usernameValidationStatus.employee.status === 'error') {
+            ElMessage.error('用户名验证失败，请检查后重试')
+            return
+          }
+        }
+        
+        // 检查手机号验证状态
+        const phone = editEmployeeFormData.phone?.trim()
+        if (phone) {
+          // 如果有手机号，检查验证状态
+          if (phoneValidationStatus.employee.status === 'error') {
+            ElMessage.error(phoneValidationStatus.employee.message || '请修正手机号错误后再提交')
+            return
+          }
+          
+          // 如果手机号还没有验证过，先进行验证
+          if (phoneValidationStatus.employee.status === '') {
+            await checkPhoneAvailabilityForEmployee()
+            // 验证后再次检查状态
+            if (phoneValidationStatus.employee.status === 'error') {
+              ElMessage.error('手机号验证失败，请检查后重试')
+              return
+            }
+          }
+        }
+        
         // 使用admin store更新员工
         const updateData = {
           username: editEmployeeFormData.username,
           realName: editEmployeeFormData.realName,
+          phone: editEmployeeFormData.phone || '',
           role: 'EMPLOYEE',
           isActive: true
         }
@@ -1358,7 +1950,8 @@ export default {
           Object.assign(editEmployeeFormData, {
             id: null,
             realName: '',
-            username: ''
+            username: '',
+            phone: ''
           })
         } else {
           ElMessage.error(result.message || '修改失败')
@@ -1422,14 +2015,32 @@ export default {
       return csEmployeeMappings.value.filter(mapping => mapping.csUserId === csUserId).length
     }
     
-    // 获取员工的客服名称
+    // 获取员工的客服名称（支持多个客服）
     const getEmployeeCsName = (employeeUserId) => {
-      const mapping = csEmployeeMappings.value.find(m => m.employeeUserId === employeeUserId)
-      if (mapping) {
+      const mappings = csEmployeeMappings.value.filter(m => m.employeeUserId === employeeUserId)
+      if (mappings.length > 0) {
+        const csNames = mappings.map(mapping => {
         const cs = customerServices.value.find(cs => cs.id === mapping.csUserId)
         return cs ? `${cs.realName} (${cs.username})` : '未知客服'
+        }).filter(name => name !== '未知客服')
+        
+        return csNames.length > 0 ? csNames.join(', ') : '未知客服'
       }
       return '未分配'
+    }
+    
+    // 获取员工的所有客服信息（用于标签显示）
+    const getEmployeeCsList = (employeeUserId) => {
+      const mappings = csEmployeeMappings.value.filter(m => m.employeeUserId === employeeUserId)
+      return mappings.map(mapping => {
+        const cs = customerServices.value.find(cs => cs.id === mapping.csUserId)
+        return cs ? {
+          id: cs.id,
+          realName: cs.realName,
+          username: cs.username,
+          fullName: `${cs.realName} (${cs.username})`
+        } : null
+      }).filter(Boolean)
     }
     
     // 刷新客服员工关系
@@ -1463,7 +2074,7 @@ export default {
       }
     }
 
-    // 刷新员工卡片数据：基于 /admin/users，然后对每位员工用 X-User-Id 查询 /employee/profile
+    // 刷新员工卡片数据：直接使用 /admin/users 接口返回的完整用户信息
     const refreshCardEmployees = async () => {
       try {
         isLoadingEmployees.value = true
@@ -1471,17 +2082,19 @@ export default {
         if (!users.value || users.value.length === 0) {
           await refreshEmployeeList()
         }
-        // 1) 过滤出员工用户
-        const baseList = (users.value || [])
+        
+        // 直接从用户列表中过滤出员工，接口已包含workStatus和gender信息
+        const employeeList = (users.value || [])
           .filter(u => u.role === 'EMPLOYEE')
           .map(u => ({
             id: u.id,
             name: u.realName || u.username || '未知员工',
             username: u.username,
             realName: u.realName,
+            phone: u.phone || '', // 添加电话号码字段
             avatar: '',
-            workStatus: 'OFF_DUTY',
-            gender: 'MALE',
+            workStatus: u.workStatus || 'OFF_DUTY', // 直接使用接口返回的工作状态
+            gender: u.gender || 'MALE', // 直接使用接口返回的性别
             game: '未设置',
             level: '未设置',
             todayOrders: 0,
@@ -1489,24 +2102,8 @@ export default {
             rating: 0
           }))
 
-        // 2) 为每位员工调用 /employee/profile（携带 X-User-Id）
-        const { getProfileForUser } = await import('../api/employee')
-        const profilePromises = baseList.map(e => getProfileForUser(e.id))
-        const results = await Promise.allSettled(profilePromises)
-
-        // 3) 合并资料中的性别与工作状态
-        results.forEach((res, idx) => {
-          if (res.status === 'fulfilled' && res.value && (res.value.code === 200 || res.value.code === 0)) {
-            const data = res.value.data || {}
-            baseList[idx] = {
-              ...baseList[idx],
-              gender: data.gender || baseList[idx].gender,
-              workStatus: data.workStatus || baseList[idx].workStatus,
-              avatar: data.avatar || baseList[idx].avatar
-            }
-          }
-        })
-        cardEmployees.value = baseList
+        cardEmployees.value = employeeList
+        console.log('管理员页面 - 员工卡片数据已更新:', employeeList.length, '条记录')
       } catch (error) {
         console.error('刷新员工卡片数据失败:', error)
       } finally {
@@ -1707,22 +2304,416 @@ export default {
       reassignVisible.value = true
     }
     
-    // 检查用户名可用性
-    const checkUsernameAvailability = async (formType) => {
-      const username = customerServiceFormData.gameNickname
-      
-      if (!username || username.trim().length < 2) {
+    // 检查新增客服用户名可用性
+    const checkUsernameAvailabilityForCS = async () => {
+      const username = customerServiceFormData.gameNickname?.trim()
+      if (!username) {
+        usernameValidationStatus.cs = {
+          loading: false,
+          status: '',
+          message: '',
+          class: '',
+          hintClass: ''
+        }
         return
       }
       
-      // 检查当前用户列表中是否已存在该用户名
-      const existingUser = users.value.find(user => user.username === username.trim())
-      if (existingUser) {
-        ElMessage.warning(`游戏昵称 "${username}" 已被使用，请选择其他昵称`)
+      if (username.length < 2 || username.length > 20) {
+        usernameValidationStatus.cs = {
+          loading: false,
+          status: 'error',
+          message: '用户名长度在 2 到 20 个字符',
+          class: 'username-error',
+          hintClass: 'error-hint'
+        }
+        return
+      }
+      
+      usernameValidationStatus.cs.loading = true
+      
+      try {
+        const response = await checkUsernameAPI(username)
+        if (response.code === 200 && response.data === true) {
+          usernameValidationStatus.cs = {
+            loading: false,
+            status: 'success',
+            message: '用户名可用',
+            class: 'username-success',
+            hintClass: 'success-hint'
+          }
+        } else {
+          usernameValidationStatus.cs = {
+            loading: false,
+            status: 'error',
+            message: '用户名已被使用',
+            class: 'username-error',
+            hintClass: 'error-hint'
+          }
+        }
+      } catch (error) {
+        usernameValidationStatus.cs = {
+          loading: false,
+          status: 'error',
+          message: '检查用户名失败，请稍后重试',
+          class: 'username-error',
+          hintClass: 'error-hint'
+        }
+      }
+    }
+    
+    // 检查编辑客服用户名可用性
+    const checkUsernameAvailabilityForEditCS = async () => {
+      const username = editCustomerServiceFormData.username?.trim()
+      if (!username) {
+        usernameValidationStatus.editCS = {
+          loading: false,
+          status: '',
+          message: '',
+          class: '',
+          hintClass: ''
+        }
+        return
+      }
+      
+      if (username.length < 2 || username.length > 20) {
+        usernameValidationStatus.editCS = {
+          loading: false,
+          status: 'error',
+          message: '用户名长度在 2 到 20 个字符',
+          class: 'username-error',
+          hintClass: 'error-hint'
+        }
+        return
+      }
+      
+      // 检查是否是原来的用户名（没有修改）
+      const currentUser = customerServices.value.find(cs => cs.id === editCustomerServiceFormData.id)
+      if (currentUser && currentUser.username === username) {
+        usernameValidationStatus.editCS = {
+          loading: false,
+          status: 'success',
+          message: '当前用户名',
+          class: 'username-success',
+          hintClass: 'success-hint'
+        }
+        return
+      }
+      
+      usernameValidationStatus.editCS.loading = true
+      
+      try {
+        const response = await checkUsernameAPI(username)
+        if (response.code === 200 && response.data === true) {
+          usernameValidationStatus.editCS = {
+            loading: false,
+            status: 'success',
+            message: '用户名可用',
+            class: 'username-success',
+            hintClass: 'success-hint'
+          }
+        } else {
+          usernameValidationStatus.editCS = {
+            loading: false,
+            status: 'error',
+            message: '用户名已被使用',
+            class: 'username-error',
+            hintClass: 'error-hint'
+          }
+        }
+      } catch (error) {
+        usernameValidationStatus.editCS = {
+          loading: false,
+          status: 'error',
+          message: '检查用户名失败，请稍后重试',
+          class: 'username-error',
+          hintClass: 'error-hint'
+        }
+      }
+    }
+    
+    // 检查编辑员工用户名可用性
+    const checkUsernameAvailabilityForEmployee = async () => {
+      const username = editEmployeeFormData.username?.trim()
+      if (!username) {
+        usernameValidationStatus.employee = {
+          loading: false,
+          status: '',
+          message: '',
+          class: '',
+          hintClass: ''
+        }
+        return
+      }
+      
+      if (username.length < 2 || username.length > 20) {
+        usernameValidationStatus.employee = {
+          loading: false,
+          status: 'error',
+          message: '用户名长度在 2 到 20 个字符',
+          class: 'username-error',
+          hintClass: 'error-hint'
+        }
+        return
+      }
+      
+      // 检查是否是原来的用户名（没有修改）
+      const currentUser = employees.value.find(emp => emp.id === editEmployeeFormData.id)
+      if (currentUser && currentUser.username === username) {
+        usernameValidationStatus.employee = {
+          loading: false,
+          status: 'success',
+          message: '当前用户名',
+          class: 'username-success',
+          hintClass: 'success-hint'
+        }
+        return
+      }
+      
+      usernameValidationStatus.employee.loading = true
+      
+      try {
+        const response = await checkUsernameAPI(username)
+        if (response.code === 200 && response.data === true) {
+          usernameValidationStatus.employee = {
+            loading: false,
+            status: 'success',
+            message: '用户名可用',
+            class: 'username-success',
+            hintClass: 'success-hint'
+          }
+        } else {
+          usernameValidationStatus.employee = {
+            loading: false,
+            status: 'error',
+            message: '用户名已被使用',
+            class: 'username-error',
+            hintClass: 'error-hint'
+          }
+        }
+      } catch (error) {
+        usernameValidationStatus.employee = {
+          loading: false,
+          status: 'error',
+          message: '检查用户名失败，请稍后重试',
+          class: 'username-error',
+          hintClass: 'error-hint'
+        }
+      }
+    }
+    
+    // 验证手机号格式
+    const validatePhoneFormat = (phone) => {
+      if (!phone) return true // 手机号可选
+      
+      // 放宽手机号格式验证，允许更多格式通过，由后端API来最终验证
+      // 只检查基本的长度和字符要求
+      const trimmed = phone.trim()
+      
+      // 至少3位数字，最多20位（包含可能的国际区号、分隔符等）
+      if (trimmed.length < 3 || trimmed.length > 20) {
         return false
       }
       
-      return true
+      // 只包含数字、+号、-号、空格、括号
+      const phoneRegex = /^[\d\+\-\s\(\)]+$/
+      return phoneRegex.test(trimmed)
+    }
+    
+    // 检查客服手机号可用性
+    const checkPhoneAvailabilityForCS = async () => {
+      const phone = customerServiceFormData.phone?.trim()
+      if (!phone) {
+        phoneValidationStatus.cs = {
+          loading: false,
+          status: '',
+          message: '',
+          class: '',
+          hintClass: ''
+        }
+        return
+      }
+      
+      if (!validatePhoneFormat(phone)) {
+        phoneValidationStatus.cs = {
+          loading: false,
+          status: 'error',
+          message: '手机号格式不正确，请输入有效的手机号',
+          class: 'phone-error',
+          hintClass: 'error-hint'
+        }
+        return
+      }
+      
+      phoneValidationStatus.cs.loading = true
+      
+      try {
+        const response = await checkPhoneAvailability(phone)
+        if (response.code === 200 && response.data === true) {
+          phoneValidationStatus.cs = {
+            loading: false,
+            status: 'success',
+            message: '手机号可用',
+            class: 'phone-success',
+            hintClass: 'success-hint'
+          }
+        } else {
+          phoneValidationStatus.cs = {
+            loading: false,
+            status: 'error',
+            message: '手机号已被其他用户使用，请更换手机号',
+            class: 'phone-error',
+            hintClass: 'error-hint'
+          }
+        }
+      } catch (error) {
+        phoneValidationStatus.cs = {
+          loading: false,
+          status: 'error',
+          message: '检查手机号失败，请稍后重试',
+          class: 'phone-error',
+          hintClass: 'error-hint'
+        }
+      }
+    }
+    
+    // 检查员工手机号可用性
+    const checkPhoneAvailabilityForEmployee = async () => {
+      const phone = editEmployeeFormData.phone?.trim()
+      if (!phone) {
+        phoneValidationStatus.employee = {
+          loading: false,
+          status: '',
+          message: '',
+          class: '',
+          hintClass: ''
+        }
+        return
+      }
+      
+      if (!validatePhoneFormat(phone)) {
+        phoneValidationStatus.employee = {
+          loading: false,
+          status: 'error',
+          message: '手机号格式不正确，请输入有效的手机号',
+          class: 'phone-error',
+          hintClass: 'error-hint'
+        }
+        return
+      }
+      
+      // 检查是否是原来的手机号（没有修改）
+      const currentUser = employees.value.find(emp => emp.id === editEmployeeFormData.id)
+      if (currentUser && currentUser.phone === phone) {
+        phoneValidationStatus.employee = {
+          loading: false,
+          status: 'success',
+          message: '当前手机号',
+          class: 'phone-success',
+          hintClass: 'success-hint'
+        }
+        return
+      }
+      
+      phoneValidationStatus.employee.loading = true
+      
+      try {
+        const response = await checkPhoneAvailability(phone)
+        if (response.code === 200 && response.data === true) {
+          phoneValidationStatus.employee = {
+            loading: false,
+            status: 'success',
+            message: '手机号可用',
+            class: 'phone-success',
+            hintClass: 'success-hint'
+          }
+        } else {
+          phoneValidationStatus.employee = {
+            loading: false,
+            status: 'error',
+            message: '手机号已被其他用户使用，请更换手机号',
+            class: 'phone-error',
+            hintClass: 'error-hint'
+          }
+        }
+      } catch (error) {
+        phoneValidationStatus.employee = {
+          loading: false,
+          status: 'error',
+          message: '检查手机号失败，请稍后重试',
+          class: 'phone-error',
+          hintClass: 'error-hint'
+        }
+      }
+    }
+    
+    // 检查编辑客服手机号可用性
+    const checkPhoneAvailabilityForEditCS = async () => {
+      const phone = editCustomerServiceFormData.phone?.trim()
+      if (!phone) {
+        phoneValidationStatus.editCS = {
+          loading: false,
+          status: '',
+          message: '',
+          class: '',
+          hintClass: ''
+        }
+        return
+      }
+      
+      if (!validatePhoneFormat(phone)) {
+        phoneValidationStatus.editCS = {
+          loading: false,
+          status: 'error',
+          message: '手机号格式不正确，请输入有效的手机号',
+          class: 'phone-error',
+          hintClass: 'error-hint'
+        }
+        return
+      }
+      
+      // 检查是否是原来的手机号（没有修改）
+      const currentUser = customerServices.value.find(cs => cs.id === editCustomerServiceFormData.id)
+      if (currentUser && currentUser.phone === phone) {
+        phoneValidationStatus.editCS = {
+          loading: false,
+          status: 'success',
+          message: '当前手机号',
+          class: 'phone-success',
+          hintClass: 'success-hint'
+        }
+        return
+      }
+      
+      phoneValidationStatus.editCS.loading = true
+      
+      try {
+        const response = await checkPhoneAvailability(phone)
+        if (response.code === 200 && response.data === true) {
+          phoneValidationStatus.editCS = {
+            loading: false,
+            status: 'success',
+            message: '手机号可用',
+            class: 'phone-success',
+            hintClass: 'success-hint'
+          }
+        } else {
+          phoneValidationStatus.editCS = {
+            loading: false,
+            status: 'error',
+            message: '手机号已被其他用户使用，请更换手机号',
+            class: 'phone-error',
+            hintClass: 'error-hint'
+          }
+        }
+      } catch (error) {
+        phoneValidationStatus.editCS = {
+          loading: false,
+          status: 'error',
+          message: '检查手机号失败，请稍后重试',
+          class: 'phone-error',
+          hintClass: 'error-hint'
+        }
+      }
     }
     
     // 处理重新分配
@@ -1753,51 +2744,34 @@ export default {
       // 使用智能轮询，只有数据变化时才更新UI
       startSmartPolling(
         'admin-employee-cards',
-        // 数据获取函数
+        // 数据获取函数 - 现在只需要调用用户列表接口
         async () => {
-          // 1. 获取基础用户数据
+          // 获取用户数据，接口已包含workStatus和gender信息
           const userResult = await adminStore.actions.fetchUsers()
           if (!userResult || !userResult.success) {
             throw new Error('获取用户数据失败')
           }
           
-          // 2. 过滤出员工用户
-          const baseList = (userResult.data || users.value || [])
+          // 直接过滤出员工用户，无需额外的API调用
+          const employeeList = (userResult.data || users.value || [])
             .filter(u => u.role === 'EMPLOYEE')
             .map(u => ({
               id: u.id,
               name: u.realName || u.username || '未知员工',
               username: u.username,
               realName: u.realName,
+              phone: u.phone || '', // 添加电话号码字段
               avatar: '',
-              workStatus: 'OFF_DUTY',
-              gender: 'MALE',
+              workStatus: u.workStatus || 'OFF_DUTY', // 直接使用接口返回的工作状态
+              gender: u.gender || 'MALE', // 直接使用接口返回的性别
               game: '未设置',
               level: '未设置',
               todayOrders: 0,
               totalOrders: 0,
               rating: 0
             }))
-
-          // 3. 为每位员工获取详细资料
-          const { getProfileForUser } = await import('../api/employee')
-          const profilePromises = baseList.map(e => getProfileForUser(e.id))
-          const results = await Promise.allSettled(profilePromises)
-
-          // 4. 合并资料中的性别与工作状态
-          results.forEach((res, idx) => {
-            if (res.status === 'fulfilled' && res.value && (res.value.code === 200 || res.value.code === 0)) {
-              const data = res.value.data || {}
-              baseList[idx] = {
-                ...baseList[idx],
-                gender: data.gender || baseList[idx].gender,
-                workStatus: data.workStatus || baseList[idx].workStatus,
-                avatar: data.avatar || baseList[idx].avatar
-              }
-            }
-          })
           
-          return baseList
+          return employeeList
         },
         // 数据变化时的回调
         (newData, oldData) => {
@@ -1825,6 +2799,15 @@ export default {
         // 确保用户信息已加载
         const currentUser = authStore.getters.currentUser.value
         if (!currentUser) {
+          // 检查是否正在登出或刚刚登出，避免无效的API调用
+          const { isLogoutInProgress, lastLogoutTime } = authStore.state
+          const timeSinceLogout = Date.now() - lastLogoutTime
+          
+          if (isLogoutInProgress || timeSinceLogout < 5000) {
+            console.log('🚪 正在登出或刚刚登出，跳过用户信息获取')
+            return
+          }
+          
           await authStore.actions.fetchCurrentUser()
         }
         
@@ -1878,6 +2861,8 @@ export default {
       employees,
       cardEmployees,
       customerServices,
+      managedEmployees,
+      isLoadingManagedEmployees,
       assignOrderForm,
       uploadRef,
       uploadArea,
@@ -1920,6 +2905,7 @@ export default {
       handleScreenshotChange,
       removeScreenshot,
       previewScreenshot,
+      getPreviewUrl,
       handleDragOver,
       handleDragLeave,
       handleDrop,
@@ -1941,6 +2927,7 @@ export default {
       assignEmployeeToCustomerService,
       getManagedEmployeeCount,
       getEmployeeCsName,
+      getEmployeeCsList,
       refreshMappings,
       showAddMappingDialog,
       showBatchAddMappingDialog,
@@ -1951,7 +2938,14 @@ export default {
       deleteMapping,
       reassignEmployee,
       handleReassign,
-      checkUsernameAvailability,
+      usernameValidationStatus,
+      checkUsernameAvailabilityForCS,
+      checkUsernameAvailabilityForEditCS,
+      checkUsernameAvailabilityForEmployee,
+      phoneValidationStatus,
+      checkPhoneAvailabilityForCS,
+      checkPhoneAvailabilityForEmployee,
+      checkPhoneAvailabilityForEditCS,
       refreshMappings,
       refreshCardEmployees,
       startPollingEmployeeCards,
@@ -2181,8 +3175,8 @@ export default {
 }
 
 .management-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 30px;
 }
 
@@ -2195,10 +3189,17 @@ export default {
 
 .customer-service-section,
 .employee-management-section {
-  background: #f8f9fa;
+  background: #fff;
   border: 1px solid #e4e7ed;
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease;
+}
+
+.customer-service-section:hover,
+.employee-management-section:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 @media (max-width: 1200px) {
@@ -2217,7 +3218,6 @@ export default {
   }
   
   .management-grid {
-    grid-template-columns: 1fr;
     gap: 20px;
   }
 }
@@ -2427,5 +3427,357 @@ export default {
   font-size: 12px;
   color: #909399;
   margin: 2px 0;
+}
+
+/* 表格美化样式 */
+.custom-table {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.custom-table :deep(.el-table__header-wrapper) {
+  border-radius: 8px 8px 0 0;
+}
+
+.custom-table :deep(.el-table__body-wrapper) {
+  border-radius: 0 0 8px 8px;
+}
+
+.custom-table :deep(.el-table__row) {
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.custom-table :deep(.el-table__row:hover) {
+  background-color: #f8faff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+  z-index: 10;
+}
+
+.custom-table :deep(.el-table__cell) {
+  padding: 12px 8px;
+  border-bottom: 1px solid #f0f2f5;
+  overflow: visible;
+}
+
+/* 操作列特殊处理，确保按钮不被裁切 */
+.custom-table :deep(.el-table__cell:last-child) {
+  overflow: visible;
+  position: relative;
+}
+
+/* 表格滚动条样式 */
+.custom-table :deep(.el-scrollbar__wrap) {
+  overflow-x: auto;
+}
+
+.custom-table :deep(.el-scrollbar__bar) {
+  opacity: 0.6;
+}
+
+.custom-table :deep(.el-scrollbar__bar:hover) {
+  opacity: 0.8;
+}
+
+.custom-table :deep(.el-scrollbar__thumb) {
+  background-color: #c1c1c1;
+  border-radius: 4px;
+}
+
+.custom-table :deep(.el-scrollbar__thumb:hover) {
+  background-color: #a8a8a8;
+}
+
+/* 表格容器高度自适应 */
+.customer-service-section .custom-table,
+.employee-management-section .custom-table {
+  min-height: 300px;
+  max-height: 500px;
+}
+
+.text-muted {
+  color: #909399;
+  font-style: italic;
+}
+
+/* 操作按钮样式 */
+.table-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 5;
+  padding: 2px 0;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border: 1px solid #d9ecff;
+  background-color: #f0f9ff;
+}
+
+.action-btn:hover {
+  border-color: #409eff;
+  background-color: #ecf5ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 20;
+}
+
+.action-btn.danger {
+  border-color: #fde2e2;
+  background-color: #fef0f0;
+}
+
+.action-btn.danger:hover {
+  background-color: #fef0f0;
+  border-color: #fab6b6;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(245, 108, 108, 0.15);
+  position: relative;
+  z-index: 20;
+}
+
+/* 员工数量按钮样式 */
+.employee-count-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  background: linear-gradient(135deg, #409eff, #66b3ff);
+  color: white;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.employee-count-btn:hover {
+  background: linear-gradient(135deg, #337ecc, #5aa3e6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+}
+
+/* 客服标签样式 */
+.cs-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.cs-tag .el-icon {
+  font-size: 12px;
+}
+
+/* 客服标签容器 */
+.cs-tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.cs-tags-container .cs-tag {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* 手机号验证样式 */
+.phone-success {
+  border-color: #67c23a;
+}
+
+.phone-success:focus {
+  border-color: #67c23a;
+  box-shadow: 0 0 0 2px rgba(103, 194, 58, 0.2);
+}
+
+.phone-error {
+  border-color: #f56c6c;
+}
+
+.phone-error:focus {
+  border-color: #f56c6c;
+  box-shadow: 0 0 0 2px rgba(245, 108, 108, 0.2);
+}
+
+/* 用户名验证样式 */
+.username-success {
+  border-color: #67c23a;
+}
+
+.username-success:focus {
+  border-color: #67c23a;
+  box-shadow: 0 0 0 2px rgba(103, 194, 58, 0.2);
+}
+
+.username-error {
+  border-color: #f56c6c;
+}
+
+.username-error:focus {
+  border-color: #f56c6c;
+  box-shadow: 0 0 0 2px rgba(245, 108, 108, 0.2);
+}
+
+.success-icon {
+  color: #67c23a;
+}
+
+.error-icon {
+  color: #f56c6c;
+}
+
+.success-hint {
+  color: #67c23a;
+  font-weight: 500;
+}
+
+.error-hint {
+  color: #f56c6c;
+  font-weight: 500;
+}
+
+/* .is-loading 类的旋转动画效果已移除 */
+
+/* 管理员工对话框样式 */
+.managed-employees-dialog {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.managed-employees-dialog :deep(.el-dialog__header) {
+  background: linear-gradient(135deg, #409eff, #66b3ff);
+  color: white;
+  padding: 20px 24px;
+  margin: 0;
+}
+
+.managed-employees-dialog :deep(.el-dialog__title) {
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.managed-employees-dialog :deep(.el-dialog__close) {
+  color: white;
+  font-size: 20px;
+}
+
+.managed-employees-dialog :deep(.el-dialog__close:hover) {
+  color: #f0f9ff;
+}
+
+.managed-employees-content {
+  padding: 0;
+}
+
+/* 客服信息卡片 */
+.cs-info-card {
+  display: flex;
+  align-items: center;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #f8faff, #ecf5ff);
+  border-bottom: 1px solid #e9ecef;
+  margin-bottom: 20px;
+}
+
+.cs-avatar {
+  margin-right: 20px;
+}
+
+.cs-avatar-img {
+  background: linear-gradient(135deg, #409eff, #66b3ff);
+  color: white;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.cs-details {
+  flex: 1;
+}
+
+.cs-name {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.cs-username,
+.cs-phone {
+  margin: 4px 0;
+  color: #606266;
+  font-size: 14px;
+}
+
+.cs-stats {
+  text-align: center;
+}
+
+.cs-stats .stat-item {
+  background: white;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 员工列表区域 */
+.employees-list-section {
+  padding: 0 24px 20px;
+}
+
+.managed-employees-table {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.managed-employees-table :deep(.el-table__header-wrapper) {
+  border-radius: 8px 8px 0 0;
+}
+
+.managed-employees-table :deep(.el-table__body-wrapper) {
+  border-radius: 0 0 8px 8px;
+}
+
+.managed-employees-table :deep(.el-table__row) {
+  transition: all 0.3s ease;
+}
+
+.managed-employees-table :deep(.el-table__row:hover) {
+  background-color: #f8faff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+}
+
+.managed-employees-table :deep(.el-table__cell) {
+  padding: 12px 8px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+/* 对话框底部样式 */
+.managed-employees-dialog :deep(.el-dialog__footer) {
+  padding: 16px 24px;
+  background: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  text-align: center;
 }
 </style>
