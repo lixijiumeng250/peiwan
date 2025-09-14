@@ -39,10 +39,23 @@ http.interceptors.request.use(
     const { isLogoutInProgress, lastLogoutTime } = authStore.state
     const timeSinceLogout = Date.now() - lastLogoutTime
     
-    if ((isLogoutInProgress || timeSinceLogout < 5000) && config.url === '/auth/me') {
-      console.log('🚫 阻止登出期间的认证请求:', config.url)
+    // 阻止登出期间的所有认证请求
+    const authUrls = ['/auth/me', '/auth/login']
+    const isAuthUrl = authUrls.some(url => config.url === url)
+    
+    if ((isLogoutInProgress || timeSinceLogout < 5000) && isAuthUrl) {
+      console.log('🚫 阻止登出期间的认证请求:', config.url, config.method?.toUpperCase())
       const error = new Error('用户正在登出，取消认证请求')
       error.isAuthCancel = true // 标记为认证取消错误，避免错误提示
+      return Promise.reject(error)
+    }
+    
+    // 强制阻止任何GET方法访问/auth/login的请求（无论何时）
+    if (config.url === '/auth/login' && config.method?.toLowerCase() === 'get') {
+      console.error('🚨 强制阻止错误的 GET /auth/login 请求')
+      console.trace('🚨 GET /auth/login 请求调用堆栈:')
+      const error = new Error('错误的请求方法: login接口应该使用POST方法')
+      error.isMethodError = true
       return Promise.reject(error)
     }
     

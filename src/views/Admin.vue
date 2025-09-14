@@ -986,6 +986,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { handleApiError } from '../utils/errorHandler'
 import authStore from '../store/auth'
+import config from '../config'
 import {
   User,
   Service,
@@ -2067,7 +2068,12 @@ export default {
           console.error('错误响应:', error.response.data)
           ElMessage.error(error.response.data?.message || '刷新失败')
         } else {
-          ElMessage.error('网络错误，请检查连接')
+          // 检查配置是否允许显示网络错误
+          if (config.errorHandling?.showNetworkErrors) {
+            ElMessage.error('网络错误，请检查连接')
+          } else {
+            console.log('网络错误已被配置隐藏: 网络请求失败')
+          }
         }
       } finally {
         isLoadingMappings.value = false
@@ -2169,7 +2175,12 @@ export default {
             ElMessage.error(error.response.data?.message || '创建失败')
           }
         } else {
-          ElMessage.error('网络错误，请检查连接')
+          // 检查配置是否允许显示网络错误
+          if (config.errorHandling?.showNetworkErrors) {
+            ElMessage.error('网络错误，请检查连接')
+          } else {
+            console.log('网络错误已被配置隐藏: 网络请求失败')
+          }
         }
       } finally {
         submitting.value = false

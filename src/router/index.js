@@ -219,38 +219,11 @@ router.beforeEach(async (to, from, next) => {
       return
     }
     
-    // 如果内存中没有用户信息，检查后端认证状态
-    try {
-      console.log('🔍 访问根路径，检查后端认证状态')
-      const isAuthenticated = await authStore.actions.fetchCurrentUser()
-      
-      if (isAuthenticated) {
-        // 认证成功，根据角色重定向
-        const userRole = authStore.getters.userRole.value?.toUpperCase()
-        console.log('✅ 后端认证有效，重定向到对应页面，角色:', userRole)
-        
-        if (userRole === 'ADMIN') {
-          next({ name: 'Admin' })
-        } else if (userRole === 'EMPLOYEE') {
-          next({ name: 'Employee' })
-        } else if (userRole === 'CS') {
-          next({ name: 'CustomerService' })
-        } else {
-          next({ name: 'Employee' }) // 默认跳转到员工页面
-        }
-        return
-      } else {
-        // 未认证，显示登录页
-        console.log('❌ 后端认证无效，显示登录页')
-        next()
-        return
-      }
-    } catch (error) {
-      console.error('🚨 检查认证状态失败:', error)
-      // 发生错误时，显示登录页
-      next()
-      return
-    }
+    // 如果内存中没有用户信息，直接显示登录页，不调用后端接口
+    // 避免在登录页面产生不必要的 /api/auth/me 调用
+    console.log('🔍 访问登录页面，内存中无用户信息，直接显示登录页')
+    next()
+    return
   }
   
   next()

@@ -2,6 +2,7 @@
 import { ElMessage, ElNotification } from 'element-plus'
 import authStore from '../store/auth'
 import router from '../router'
+import config from '../config'
 
 // 错误类型枚举
 export const ErrorTypes = {
@@ -166,6 +167,12 @@ class ErrorHandler {
 
   // 网络错误处理
   handleNetworkError(errorInfo, context) {
+    // 检查配置是否允许显示网络错误
+    if (!config.errorHandling?.showNetworkErrors) {
+      console.log('网络错误已被配置隐藏:', errorInfo.message)
+      return
+    }
+    
     ElNotification({
       title: '网络错误',
       message: errorInfo.message,

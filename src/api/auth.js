@@ -109,7 +109,7 @@ export const logout = async () => {
     console.log('🚪 HTTP方法: POST, URL: /auth/logout')
     
     const response = await http.post('/auth/logout')
-    
+    console.log('🚪 登出API响应:', response)
     // 预期的后端响应格式
     // {
     //   code: 0,

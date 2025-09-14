@@ -48,5 +48,19 @@ export default {
         description: '普通用户账号'
       }
     ]
+  },
+  
+  // 错误处理配置
+  errorHandling: {
+    // 是否显示网络错误提示
+    showNetworkErrors: false,
+    // 是否显示服务器错误提示
+    showServerErrors: true,
+    // 是否显示认证错误提示
+    showAuthErrors: true,
+    // 是否显示权限错误提示
+    showPermissionErrors: true,
+    // 是否显示验证错误提示
+    showValidationErrors: true
   }
 }
