@@ -190,29 +190,67 @@ router.beforeEach(async (to, from, next) => {
     }
   }
   
-  // 如果已登录用户访问根路径（登录页），根据角色重定向
-  if (to.path === '/' && authStore.getters.isAuthenticated.value) {
-    // 检查是否刚刚登出，如果是则不进行角色重定向，直接显示登录页
+  // 如果访问根路径（登录页），检查认证状态并重定向
+  if (to.path === '/') {
+    // 检查是否刚刚登出，如果是则直接显示登录页
     const { isLogoutInProgress, lastLogoutTime } = authStore.state
     const timeSinceLogout = Date.now() - lastLogoutTime
     
     if (isLogoutInProgress || timeSinceLogout < 2000) {
-      console.log('🚪 刚刚登出或正在登出中，跳过角色重定向，显示登录页')
+      console.log('🚪 刚刚登出或正在登出中，显示登录页')
       next()
       return
     }
     
-    const userRole = authStore.getters.userRole.value?.toUpperCase()
-    if (userRole === 'ADMIN') {
-      next({ name: 'Admin' })
-    } else if (userRole === 'EMPLOYEE') {
-      next({ name: 'Employee' })
-    } else if (userRole === 'CS') {
-      next({ name: 'CustomerService' })
-    } else {
-      next({ name: 'Employee' }) // 默认跳转到员工页面
+    // 如果内存中已有用户信息，直接重定向
+    if (authStore.getters.isAuthenticated.value) {
+      const userRole = authStore.getters.userRole.value?.toUpperCase()
+      console.log('🔄 已登录用户访问根路径，重定向到对应页面，角色:', userRole)
+      
+      if (userRole === 'ADMIN') {
+        next({ name: 'Admin' })
+      } else if (userRole === 'EMPLOYEE') {
+        next({ name: 'Employee' })
+      } else if (userRole === 'CS') {
+        next({ name: 'CustomerService' })
+      } else {
+        next({ name: 'Employee' }) // 默认跳转到员工页面
+      }
+      return
     }
-    return
+    
+    // 如果内存中没有用户信息，检查后端认证状态
+    try {
+      console.log('🔍 访问根路径，检查后端认证状态')
+      const isAuthenticated = await authStore.actions.fetchCurrentUser()
+      
+      if (isAuthenticated) {
+        // 认证成功，根据角色重定向
+        const userRole = authStore.getters.userRole.value?.toUpperCase()
+        console.log('✅ 后端认证有效，重定向到对应页面，角色:', userRole)
+        
+        if (userRole === 'ADMIN') {
+          next({ name: 'Admin' })
+        } else if (userRole === 'EMPLOYEE') {
+          next({ name: 'Employee' })
+        } else if (userRole === 'CS') {
+          next({ name: 'CustomerService' })
+        } else {
+          next({ name: 'Employee' }) // 默认跳转到员工页面
+        }
+        return
+      } else {
+        // 未认证，显示登录页
+        console.log('❌ 后端认证无效，显示登录页')
+        next()
+        return
+      }
+    } catch (error) {
+      console.error('🚨 检查认证状态失败:', error)
+      // 发生错误时，显示登录页
+      next()
+      return
+    }
   }
   
   next()
