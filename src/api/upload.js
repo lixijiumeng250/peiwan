@@ -120,11 +120,7 @@ export const validateImageFile = (file) => {
     return { valid: false, message: '只支持 JPG、PNG、GIF、WebP 格式的图片' }
   }
 
-  // 检查文件大小 (最大 5MB)
-  const maxSize = 5 * 1024 * 1024
-  if (file.size > maxSize) {
-    return { valid: false, message: '图片大小不能超过 5MB' }
-  }
+  // 文件大小检查已移除，允许上传任意大小的图片文件
 
   return { valid: true, message: '验证通过' }
 }

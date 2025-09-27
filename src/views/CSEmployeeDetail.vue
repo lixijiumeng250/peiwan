@@ -264,7 +264,7 @@
                       <div class="upload-text">
                         <p>点击上传派单图片</p>
                         <p class="upload-tip">支持：点击选择 | 拖拽上传 | 粘贴</p>
-                        <p class="upload-tip">jpg/png文件，不超过2MB</p>
+                        <p class="upload-tip">支持jpg/png格式文件</p>
                       </div>
                     </div>
                   </el-upload>

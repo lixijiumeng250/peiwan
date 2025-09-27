@@ -245,7 +245,7 @@
             <el-button type="primary">选择图片</el-button>
             <template #tip>
               <div class="el-upload__tip">
-                只能上传jpg/png文件，且不超过2MB
+                只能上传jpg/png文件
               </div>
             </template>
           </el-upload>
@@ -289,7 +289,7 @@
             <el-button type="primary">选择图片</el-button>
             <template #tip>
               <div class="el-upload__tip">
-                只能上传jpg/png文件，且不超过2MB
+                只能上传jpg/png文件
               </div>
             </template>
           </el-upload>
@@ -358,7 +358,7 @@
             <el-button type="primary">选择图片</el-button>
             <template #tip>
               <div class="el-upload__tip">
-                只能上传jpg/png文件，且不超过2MB<br/>
+                只能上传jpg/png文件<br/>
                 <span style="color: #f56c6c;">注意：这是您的最后一次提交机会，请仔细检查截图内容</span>
               </div>
             </template>
