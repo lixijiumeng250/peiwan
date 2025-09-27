@@ -14,5 +14,7 @@ app.use(ElementPlus)
 // 设置全局错误处理
 setupGlobalErrorHandler(app)
 
-// 直接启动应用，不自动初始化认证状态
-app.mount('#app')
+// 初始化认证状态后启动应用
+authStore.actions.initAuth().finally(() => {
+  app.mount('#app')
+})

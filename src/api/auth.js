@@ -22,14 +22,11 @@ export const login = async (loginData) => {
       rememberMe: loginData.rememberMe || false
     })
     
-    // 预期的后端响应格式
+    // 预期的后端响应格式（Session认证模式）
     // {
     //   code: 0,
     //   message: "",
     //   data: {
-    //     accessToken: "",
-    //     refreshToken: "",
-    //     expiresIn: 0,
     //     user: {
     //       id: 0,
     //       username: "",
@@ -39,6 +36,8 @@ export const login = async (loginData) => {
     //       createdAt: "",
     //       lastLogin: ""
     //     }
+    //     // Session认证：不返回token，认证信息存储在后端Session中
+    //     // 前端通过Cookie中的JSESSIONID维持会话状态
     //   },
     //   timestamp: "",
     //   requestId: ""

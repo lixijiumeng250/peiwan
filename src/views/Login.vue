@@ -50,9 +50,8 @@
             <label class="checkbox-label">
               <input type="checkbox" v-model="rememberMe" />
               <span class="checkmark"></span>
-              记住我
+              七天内保持登录
             </label>
-            <a href="#" class="forgot-password" @click.prevent="handleForgotPassword">忘记密码？</a>
           </div>
           
           <button type="submit" class="auth-button" :disabled="isLoading">
@@ -107,17 +106,11 @@ export default {
       if (!this.loginForm.username) {
         this.errors.username = '请输入用户名'
         isValid = false
-      } else if (this.loginForm.username.length < 3) {
-        this.errors.username = '用户名至少需要3个字符'
-        isValid = false
       }
       
       // 验证密码
       if (!this.loginForm.password) {
         this.errors.password = '请输入密码'
-        isValid = false
-      } else if (this.loginForm.password.length < 6) {
-        this.errors.password = '密码至少需要6个字符'
         isValid = false
       }
       
@@ -219,11 +212,6 @@ export default {
       this.showPassword = !this.showPassword
     },
     
-    // 忘记密码处理
-    handleForgotPassword() {
-      // TODO: 实现忘记密码功能
-      alert('忘记密码功能正在开发中，请联系管理员')
-    },
     
     // 快速登录（演示用）
     quickLogin(role = 'user') {
@@ -245,7 +233,40 @@ export default {
       return
     }
     
-    // 处理来自注册页面的参数
+    // 检查是否有记住的登录状态，如果有则自动填充用户名
+    try {
+      const rememberLogin = localStorage.getItem('remember_login')
+      const rememberExpire = localStorage.getItem('remember_expire')
+      
+      if (rememberLogin === 'true' && rememberExpire) {
+        // 检查是否过期
+        const expireTime = parseInt(rememberExpire)
+        const now = Date.now()
+        
+        if (now <= expireTime) {
+          const rememberedUser = localStorage.getItem('remembered_user')
+          if (rememberedUser) {
+            const user = JSON.parse(rememberedUser)
+            this.loginForm.username = user.username || ''
+            this.rememberMe = true
+            
+            const remainingDays = Math.ceil((expireTime - now) / (24 * 60 * 60 * 1000))
+            console.log('✅ 自动填充记住的用户名:', user.username)
+            console.log(`✅ 七天内保持登录还有 ${remainingDays} 天有效期`)
+          }
+        } else {
+          // 已过期，清除数据
+          console.log('🕒 七天内保持登录已过期，清除数据')
+          localStorage.removeItem('remembered_user')
+          localStorage.removeItem('remember_login')
+          localStorage.removeItem('remember_expire')
+        }
+      }
+    } catch (error) {
+      console.error('读取记住的用户信息失败:', error)
+    }
+    
+    // 处理来自注册页面的参数（优先级更高，会覆盖记住的用户名）
     if (this.$route.query.fromRegister === 'true') {
       // 自动填充用户名
       if (this.$route.query.username) {
@@ -429,15 +450,6 @@ export default {
   font-size: 12px;
 }
 
-.forgot-password {
-  color: #409eff;
-  text-decoration: none;
-  font-size: 14px;
-}
-
-.forgot-password:hover {
-  text-decoration: underline;
-}
 
 .auth-button {
   width: 100%;

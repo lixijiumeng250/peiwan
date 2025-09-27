@@ -3,17 +3,99 @@ import { reactive, computed } from 'vue'
 import * as authAPI from '../api/auth'
 import { resetCancelToken } from '../api/http'
 import { usePolling } from '../utils/polling'
-// Cookie 单会话模式：不使用 authManager，不存储 token
+// Cookie 单会话模式：支持记住登录状态功能
 
-// 创建响应式状态
+// 本地存储键名
+const REMEMBER_USER_KEY = 'remembered_user'
+const REMEMBER_LOGIN_KEY = 'remember_login'
+const REMEMBER_EXPIRE_KEY = 'remember_expire'
+
+// 七天的毫秒数
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
+
+// 本地存储辅助函数
+const storage = {
+  // 保存记住的用户信息（七天有效期）
+  saveRememberedUser(user) {
+    try {
+      const expireTime = Date.now() + SEVEN_DAYS_MS
+      localStorage.setItem(REMEMBER_USER_KEY, JSON.stringify(user))
+      localStorage.setItem(REMEMBER_LOGIN_KEY, 'true')
+      localStorage.setItem(REMEMBER_EXPIRE_KEY, expireTime.toString())
+      console.log('✅ 已保存用户登录状态到本地存储（七天有效期）:', user.username)
+      console.log('✅ 过期时间:', new Date(expireTime).toLocaleString())
+    } catch (error) {
+      console.error('保存用户登录状态失败:', error)
+    }
+  },
+  
+  // 获取记住的用户信息（检查七天有效期）
+  getRememberedUser() {
+    try {
+      const rememberLogin = localStorage.getItem(REMEMBER_LOGIN_KEY)
+      if (rememberLogin !== 'true') {
+        return null
+      }
+      
+      // 检查过期时间
+      const expireTimeStr = localStorage.getItem(REMEMBER_EXPIRE_KEY)
+      if (expireTimeStr) {
+        const expireTime = parseInt(expireTimeStr)
+        const now = Date.now()
+        
+        if (now > expireTime) {
+          console.log('🕒 记住的登录状态已过期，自动清除')
+          console.log('🕒 过期时间:', new Date(expireTime).toLocaleString())
+          console.log('🕒 当前时间:', new Date(now).toLocaleString())
+          storage.clearRememberedUser()
+          return null
+        }
+        
+        const remainingDays = Math.ceil((expireTime - now) / (24 * 60 * 60 * 1000))
+        console.log(`✅ 记住的登录状态还有 ${remainingDays} 天有效期`)
+      }
+      
+      const userStr = localStorage.getItem(REMEMBER_USER_KEY)
+      if (userStr) {
+        const user = JSON.parse(userStr)
+        console.log('✅ 从本地存储获取到记住的用户:', user.username)
+        return user
+      }
+    } catch (error) {
+      console.error('获取记住的用户信息失败:', error)
+      // 清除损坏的数据
+      storage.clearRememberedUser()
+    }
+    return null
+  },
+  
+  // 清除记住的用户信息
+  clearRememberedUser() {
+    try {
+      localStorage.removeItem(REMEMBER_USER_KEY)
+      localStorage.removeItem(REMEMBER_LOGIN_KEY)
+      localStorage.removeItem(REMEMBER_EXPIRE_KEY)
+      console.log('✅ 已清除本地存储的用户登录状态')
+    } catch (error) {
+      console.error('清除用户登录状态失败:', error)
+    }
+  },
+  
+  // 检查是否有记住的登录状态
+  hasRememberedLogin() {
+    return localStorage.getItem(REMEMBER_LOGIN_KEY) === 'true'
+  }
+}
+
+// 创建响应式状态（Session认证模式）
 const state = reactive({
   user: null,
-  accessToken: null,
-  refreshToken: null,
+  // Session认证：移除token相关状态，认证完全依赖后端Session和Cookie
   isLoading: false,
   error: null,
   isLogoutInProgress: false, // 标记是否正在登出
-  lastLogoutTime: 0 // 最后一次登出的时间戳
+  lastLogoutTime: 0, // 最后一次登出的时间戳
+  rememberLogin: false // 是否记住登录状态
 })
 
 // 计算属性
@@ -59,24 +141,60 @@ const actions = {
     state.user = user
   },
   
-  // 设置令牌
-  setTokens(accessToken, refreshToken) {
-    state.accessToken = accessToken
-    state.refreshToken = refreshToken
-  },
-  
-  // 同步设置认证状态（Cookie 模式仅同步内存）
-  setAuthState(_accessToken, _refreshToken, user) {
-    this.setTokens(null, null)
+  // Session认证：设置认证状态（只处理用户信息和记住登录）
+  setAuthState(user, rememberMe = false) {
     this.setUser(user)
-    // Cookie 模式：不需要前端存储，完全依赖后端会话
+    state.rememberLogin = rememberMe
+    
+    console.log('🍪 Session认证状态已设置:', {
+      userId: user?.id,
+      username: user?.username,
+      role: user?.role,
+      rememberMe: rememberMe
+    })
+    
+    // 如果选择记住登录状态，保存到本地存储
+    if (rememberMe && user) {
+      storage.saveRememberedUser(user)
+    } else if (!rememberMe) {
+      // 如果不记住登录状态，清除本地存储
+      storage.clearRememberedUser()
+    }
+    
+    // Session认证：认证状态完全依赖后端Session和Cookie
+    // 前端只需要保存用户信息用于UI显示和业务逻辑
   },
   
-  // 初始化认证状态（Cookie 模式）
+  // 初始化认证状态（Cookie 模式，支持记住登录状态）
   async initAuth() {
     try {
       console.log('开始初始化认证状态（Cookie 模式）')
-      // 直接询问后端当前会话
+      
+      // 首先检查本地存储是否有记住的用户信息
+      const rememberedUser = storage.getRememberedUser()
+      if (rememberedUser) {
+        console.log('发现记住的用户信息，尝试恢复登录状态:', rememberedUser.username)
+        state.rememberLogin = true
+        
+        // 先设置用户信息到内存，然后验证后端会话
+        this.setUser(rememberedUser)
+        
+        // 验证后端会话是否仍然有效
+        const success = await this.fetchCurrentUser()
+        if (success) {
+          console.log('记住的登录状态验证成功:', {
+            user: state.user?.username,
+            role: state.user?.role
+          })
+          return
+        } else {
+          console.log('记住的登录状态已过期，清除本地存储')
+          storage.clearRememberedUser()
+          this.clearAuth()
+        }
+      }
+      
+      // 如果没有记住的用户信息，直接询问后端当前会话
       const success = await this.fetchCurrentUser()
       if (success) {
         console.log('认证状态初始化成功:', {
@@ -88,6 +206,8 @@ const actions = {
       }
     } catch (error) {
       console.error('初始化认证状态失败:', error)
+      // 清除可能损坏的本地存储
+      storage.clearRememberedUser()
       this.clearAuth()
     }
   },
@@ -102,9 +222,16 @@ const actions = {
       
       // 成功判定：兼容 code === 0 或 code === 200
       const isSuccessCode = response && (response.code === 0 || response.code === 200)
-      if (isSuccessCode && response.data) {
-        // Cookie 模式：后端设置 Cookie，这里仅同步用户并广播
-        this.setAuthState(null, null, response.data.user)
+      if (isSuccessCode && response.data && response.data.user) {
+        // Session认证：后端设置Session Cookie，前端只需保存用户信息
+        this.setAuthState(response.data.user, loginData.rememberMe)
+        
+        console.log('🍪 登录成功，Session Cookie已设置:', {
+          userId: response.data.user.id,
+          username: response.data.user.username,
+          role: response.data.user.role,
+          rememberMe: loginData.rememberMe
+        })
         
         return {
           success: true,
@@ -216,17 +343,6 @@ const actions = {
         }
       }, 200)
       
-      // 调用后端登出接口
-      try { 
-        console.log('🌐 调用后端登出接口')
-        await authAPI.logout() 
-        console.log('✅ 后端登出接口调用成功')
-      } catch (e) { 
-        console.warn('⚠️ 登出API失败', e) 
-      }
-      
-      // 清除本地认证状态
-      console.log('🧹 清除本地认证状态')
       this.clearAuth()
       
       console.log('✅ 登出操作完成')
@@ -309,15 +425,18 @@ const actions = {
     }
   },
   
-  // 清除认证状态
+  // 清除认证状态（Session认证模式）
   clearAuth() {
-    console.log('🧹 清除认证状态')
+    console.log('🧹 清除认证状态（Session认证模式）')
     
-    // 清除内存状态
+    // 清除内存状态（Session认证模式）
     state.user = null
-    state.accessToken = null
-    state.refreshToken = null
+    // Session认证：移除token相关状态，认证完全依赖后端Session Cookie
     state.error = null
+    state.rememberLogin = false
+    
+    // 清除本地存储的记住登录状态
+    storage.clearRememberedUser()
     
     // 确保清除所有轮询（额外保险 - 强制清理模式）
     try {

@@ -219,9 +219,9 @@ router.beforeEach(async (to, from, next) => {
       return
     }
     
-    // 如果内存中没有用户信息，直接显示登录页，不调用后端接口
-    // 避免在登录页面产生不必要的 /api/auth/me 调用
-    console.log('🔍 访问登录页面，内存中无用户信息，直接显示登录页')
+    // 如果内存中没有用户信息，直接显示登录页
+    // 认证状态初始化已在 main.js 中完成，这里不需要再次调用后端接口
+    console.log('🔍 访问登录页面，内存中无用户信息，显示登录页')
     next()
     return
   }

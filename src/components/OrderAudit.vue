@@ -3,19 +3,11 @@
     <div class="audit-content">
       <!-- 工单基本信息 -->
       <div class="order-info-section">
-        <h4>工单信息</h4>
+        <h4 class="section-title">单号：{{ order.orderNumber }}</h4>
         <div class="info-grid">
-          <div class="info-item">
-            <span class="label">单号:</span>
-            <span class="value">{{ order.orderNumber }}</span>
-          </div>
           <div class="info-item">
             <span class="label">员工:</span>
             <span class="value">{{ order.employeeName }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">委托人:</span>
-            <span class="value">{{ order.customerName }}</span>
           </div>
           <div class="info-item">
             <span class="label">游戏类型:</span>
@@ -25,6 +17,17 @@
             <span class="label">服务类型:</span>
             <span class="value">{{ order.serviceType }}</span>
           </div>
+          <!-- 续单信息 -->
+          <template v-if="order.additionalInfo">
+            <div class="info-item" v-if="parseRenewalInfo(order.additionalInfo).duration">
+              <span class="label">续单时长:</span>
+              <span class="value">{{ parseRenewalInfo(order.additionalInfo).duration }}</span>
+            </div>
+            <div class="info-item" v-if="parseRenewalInfo(order.additionalInfo).price">
+              <span class="label">续单单价:</span>
+              <span class="value">{{ parseRenewalInfo(order.additionalInfo).price }}</span>
+            </div>
+          </template>
           <div class="info-item">
             <span class="label">游戏水平:</span>
             <span class="value">{{ order.gameLevel }}</span>
@@ -46,6 +49,14 @@
               {{ getStatusText(order.status) }}
             </el-tag>
           </div>
+        </div>
+      </div>
+
+      <!-- 委托信息区域 -->
+      <div class="client-info-section" v-if="order.clientInfo && order.clientInfo.trim()">
+        <h4 class="section-title">委托信息</h4>
+        <div class="client-info-content">
+          {{ order.clientInfo }}
         </div>
       </div>
 
@@ -78,6 +89,10 @@
                 <el-icon><Picture /></el-icon>
                 <span>暂无截图</span>
               </div>
+              <div class="screenshot-time" v-if="order.createdAt">
+                <span class="time-label">派单时间：</span>
+                <span class="time-value">{{ formatDateTime(order.createdAt) }}</span>
+              </div>
             </div>
           </div>
 
@@ -106,6 +121,10 @@
                 <el-icon><Picture /></el-icon>
                 <span>暂无截图</span>
               </div>
+              <div class="screenshot-time" v-if="order.acceptedAt">
+                <span class="time-label">接单时间：</span>
+                <span class="time-value">{{ formatDateTime(order.acceptedAt) }}</span>
+              </div>
             </div>
           </div>
 
@@ -133,6 +152,10 @@
               <div v-else class="no-screenshot">
                 <el-icon><Picture /></el-icon>
                 <span>暂无截图</span>
+              </div>
+              <div class="screenshot-time" v-if="order.completedAt">
+                <span class="time-label">完成时间：</span>
+                <span class="time-value">{{ formatDateTime(order.completedAt) }}</span>
               </div>
             </div>
           </div>
@@ -243,6 +266,7 @@ import {
   Close
 } from '@element-plus/icons-vue'
 import customerServiceStore from '../store/customerService'
+import { formatDateTime } from '../utils/dateFormatter'
 
 export default {
   name: 'OrderAudit',
@@ -421,6 +445,20 @@ export default {
       }
     }
     
+    // 解析续单信息
+    const parseRenewalInfo = (additionalInfo) => {
+      if (!additionalInfo) return { duration: '', price: '' }
+      
+      // 解析格式：续单时长：2，续单单价：111
+      const durationMatch = additionalInfo.match(/续单时长[：:]\s*([^，,]+)/)
+      const priceMatch = additionalInfo.match(/续单单价[：:]\s*([^，,]+)/)
+      
+      return {
+        duration: durationMatch ? durationMatch[1].trim() : '',
+        price: priceMatch ? priceMatch[1].trim() : ''
+      }
+    }
+    
     return {
       // 响应式数据
       auditForm,
@@ -436,6 +474,7 @@ export default {
       getActionText,
       getResultSubtitle,
       formatDateTime,
+      parseRenewalInfo,
       handleApprove,
       handleReject
     }
@@ -609,6 +648,98 @@ export default {
 
 .result-display {
   text-align: center;
+}
+
+.screenshot-time {
+  margin-top: 8px;
+  padding: 6px 8px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #606266;
+  text-align: center;
+  border: 1px solid #e4e7ed;
+}
+
+.time-label {
+  font-weight: 500;
+  color: #909399;
+}
+
+.time-value {
+  color: #409eff;
+  font-weight: 500;
+}
+
+.client-info-text {
+  min-height: 40px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #495057;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-top: 4px;
+  position: relative;
+}
+
+.client-info-text::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(to bottom, #409eff, #67c23a);
+  border-radius: 8px 0 0 8px;
+}
+
+/* 委托信息区域样式 */
+.client-info-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+}
+
+.client-info-section .section-title {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #409eff;
+}
+
+.client-info-content {
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #495057;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  min-height: 60px;
+}
+
+.client-info-content::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(to bottom, #409eff, #67c23a);
+  border-radius: 8px 0 0 8px;
 }
 
 @media (max-width: 768px) {

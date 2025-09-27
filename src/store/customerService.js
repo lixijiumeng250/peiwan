@@ -535,7 +535,7 @@ const actions = {
       // 转换数据格式以匹配API要求
       const apiData = {
         assignedEmployeeId: orderData.employeeId,
-        clientInfo: `客户: ${orderData.customerName}, 游戏: ${orderData.game}, 陪玩类型: ${playStyleText}, 服务类型: ${serviceTypeText}, 等级: ${orderData.gameLevel}`,
+        clientInfo: `客户: ${orderData.customerName}, 游戏: ${orderData.game}, 陪玩类型: ${playStyleText}, 服务类型: ${serviceTypeText}, 等级: ${orderData.gameLevel}, 委托信息: ${orderData.clientInfo}`,
         orderInfoScreenshotUrl: orderData.screenshot || null
       }
       

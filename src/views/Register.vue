@@ -425,12 +425,8 @@ export default {
         return
       }
       
-      if (password.length < 6) {
-        this.errors.password = '密码至少需要6个字符'
-      } else if (password.length > 20) {
+      if (password.length > 20) {
         this.errors.password = '密码不能超过20个字符'
-      } else if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(password)) {
-        this.errors.password = '密码必须包含字母和数字'
       } else {
         delete this.errors.password
       }

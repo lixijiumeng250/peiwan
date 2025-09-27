@@ -230,16 +230,8 @@
       <div v-if="currentOrder" class="accept-content">
         <!-- 工单基本信息 -->
         <div class="order-info-section">
-          <h4 class="section-title">工单信息</h4>
+          <h4 class="section-title">单号：{{ currentOrder.orderNumber || currentOrder.id }}</h4>
           <div class="info-grid">
-            <div class="info-item">
-              <span class="info-label">单号：</span>
-              <span class="info-value">{{ currentOrder.orderNumber || currentOrder.id }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">委托人：</span>
-              <span class="info-value">{{ currentOrder.customerName }}</span>
-            </div>
             <div class="info-item">
               <span class="info-label">游戏类型：</span>
               <span class="info-value">{{ currentOrder.game }}</span>
@@ -261,6 +253,25 @@
                 {{ getStatusText(currentOrder.status) }}
               </el-tag>
             </div>
+            <!-- 续单信息显示 -->
+            <template v-if="currentOrder.additionalInfo">
+              <div class="info-item" v-if="parseRenewalInfo(currentOrder.additionalInfo).duration">
+                <span class="info-label">续单时长：</span>
+                <span class="info-value">{{ parseRenewalInfo(currentOrder.additionalInfo).duration }}</span>
+              </div>
+              <div class="info-item" v-if="parseRenewalInfo(currentOrder.additionalInfo).price">
+                <span class="info-label">续单单价：</span>
+                <span class="info-value">{{ parseRenewalInfo(currentOrder.additionalInfo).price }}</span>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- 委托信息区域 -->
+        <div class="client-info-section" v-if="currentOrder.clientInfo && currentOrder.clientInfo.trim()">
+          <h4 class="section-title">委托信息</h4>
+          <div class="client-info-content">
+            {{ currentOrder.clientInfo }}
           </div>
         </div>
 
@@ -283,6 +294,10 @@
                   @click="previewImage(getOrderInfoScreenshotForDialog(currentOrder))"
                   class="screenshot-image"
                 />
+                <div class="screenshot-time" v-if="currentOrder && currentOrder.createdAt">
+                  <span class="time-label">派单时间：</span>
+                  <span class="time-value">{{ formatDateTime(currentOrder.createdAt) }}</span>
+                </div>
               </div>
             </div>
             
@@ -378,16 +393,8 @@
       <div v-if="currentOrder" class="complete-content">
         <!-- 工单基本信息 -->
         <div class="order-info-section">
-          <h4 class="section-title">工单信息</h4>
+          <h4 class="section-title">单号：{{ currentOrder.orderNumber || currentOrder.id }}</h4>
           <div class="info-grid">
-            <div class="info-item">
-              <span class="info-label">单号：</span>
-              <span class="info-value">{{ currentOrder.orderNumber || currentOrder.id }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">委托人：</span>
-              <span class="info-value">{{ currentOrder.customerName }}</span>
-            </div>
             <div class="info-item">
               <span class="info-label">游戏类型：</span>
               <span class="info-value">{{ currentOrder.game }}</span>
@@ -409,6 +416,17 @@
                 {{ getStatusText(currentOrder.status) }}
               </el-tag>
             </div>
+            <!-- 续单信息显示 -->
+            <template v-if="currentOrder.additionalInfo">
+              <div class="info-item" v-if="parseRenewalInfo(currentOrder.additionalInfo).duration">
+                <span class="info-label">续单时长：</span>
+                <span class="info-value">{{ parseRenewalInfo(currentOrder.additionalInfo).duration }}</span>
+              </div>
+              <div class="info-item" v-if="parseRenewalInfo(currentOrder.additionalInfo).price">
+                <span class="info-label">续单单价：</span>
+                <span class="info-value">{{ parseRenewalInfo(currentOrder.additionalInfo).price }}</span>
+              </div>
+            </template>
           </div>
         </div>
 
@@ -431,6 +449,10 @@
                   @click="previewImage(getOrderInfoScreenshotForDialog(currentOrder))"
                   class="screenshot-image"
                 />
+                <div class="screenshot-time" v-if="currentOrder && currentOrder.createdAt">
+                  <span class="time-label">派单时间：</span>
+                  <span class="time-value">{{ formatDateTime(currentOrder.createdAt) }}</span>
+                </div>
               </div>
             </div>
             
@@ -449,6 +471,10 @@
                   @click="previewImage(getAcceptScreenshotForDialog(currentOrder))"
                   class="screenshot-image"
                 />
+                <div class="screenshot-time" v-if="currentOrder && currentOrder.acceptedAt">
+                  <span class="time-label">接单时间：</span>
+                  <span class="time-value">{{ formatDateTime(currentOrder.acceptedAt) }}</span>
+                </div>
               </div>
             </div>
             
@@ -539,22 +565,14 @@
     <el-dialog
       v-model="continueOrderVisible"
       title="续单确认"
-      width="600px"
+      width="900px"
       class="continue-dialog"
     >
       <div v-if="currentOrder" class="continue-content">
         <!-- 工单基本信息 -->
         <div class="order-info-section">
-          <h4 class="section-title">工单信息</h4>
+          <h4 class="section-title">单号：{{ currentOrder.orderNumber || currentOrder.id }}</h4>
           <div class="info-grid">
-            <div class="info-item">
-              <span class="info-label">单号：</span>
-              <span class="info-value">{{ currentOrder.orderNumber || currentOrder.id }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">委托人：</span>
-              <span class="info-value">{{ currentOrder.customerName }}</span>
-            </div>
             <div class="info-item">
               <span class="info-label">游戏类型：</span>
               <span class="info-value">{{ currentOrder.game }}</span>
@@ -575,6 +593,114 @@
               >
                 {{ getStatusText(currentOrder.status) }}
               </el-tag>
+            </div>
+            <!-- 续单信息显示 -->
+            <template v-if="currentOrder.additionalInfo">
+              <div class="info-item" v-if="parseRenewalInfo(currentOrder.additionalInfo).duration">
+                <span class="info-label">续单时长：</span>
+                <span class="info-value">{{ parseRenewalInfo(currentOrder.additionalInfo).duration }}</span>
+              </div>
+              <div class="info-item" v-if="parseRenewalInfo(currentOrder.additionalInfo).price">
+                <span class="info-label">续单单价：</span>
+                <span class="info-value">{{ parseRenewalInfo(currentOrder.additionalInfo).price }}</span>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- 图片资料区域 -->
+        <div class="screenshots-section">
+          <h4 class="section-title">图片资料</h4>
+          <div class="screenshot-grid three-columns">
+            <!-- 派单图片 -->
+            <div class="screenshot-container">
+              <div class="screenshot-box">
+                <div class="screenshot-title">派单图片</div>
+                <div class="screenshot-placeholder" v-if="!getOrderInfoScreenshotForDialog(currentOrder)">
+                  <el-icon class="placeholder-icon"><Picture /></el-icon>
+                  <span>暂无派单图片</span>
+                </div>
+                <img 
+                  v-else
+                  :src="getPreviewUrl(getOrderInfoScreenshotForDialog(currentOrder))" 
+                  alt="派单图片"
+                  @click="previewImage(getOrderInfoScreenshotForDialog(currentOrder))"
+                  class="screenshot-image"
+                />
+                <div class="screenshot-time" v-if="currentOrder && currentOrder.createdAt">
+                  <span class="time-label">派单时间：</span>
+                  <span class="time-value">{{ formatDateTime(currentOrder.createdAt) }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 接单图片 -->
+            <div class="screenshot-container">
+              <div class="screenshot-box">
+                <div class="screenshot-title">接单图片</div>
+                <div class="screenshot-placeholder" v-if="!getAcceptScreenshotForDialog(currentOrder)">
+                  <el-icon class="placeholder-icon"><Picture /></el-icon>
+                  <span>暂无接单图片</span>
+                </div>
+                <img 
+                  v-else
+                  :src="getPreviewUrl(getAcceptScreenshotForDialog(currentOrder))" 
+                  alt="接单图片"
+                  @click="previewImage(getAcceptScreenshotForDialog(currentOrder))"
+                  class="screenshot-image"
+                />
+                <div class="screenshot-time" v-if="currentOrder && currentOrder.acceptedAt">
+                  <span class="time-label">接单时间：</span>
+                  <span class="time-value">{{ formatDateTime(currentOrder.acceptedAt) }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 完成图片 -->
+            <div class="screenshot-container">
+              <div class="screenshot-box">
+                <div class="screenshot-title">完成图片</div>
+                <div class="screenshot-placeholder" v-if="!getCompleteScreenshotForDialog(currentOrder)">
+                  <el-icon class="placeholder-icon"><Picture /></el-icon>
+                  <span>暂无完成图片</span>
+                </div>
+                <img 
+                  v-else
+                  :src="getPreviewUrl(getCompleteScreenshotForDialog(currentOrder))" 
+                  alt="完成图片"
+                  @click="previewImage(getCompleteScreenshotForDialog(currentOrder))"
+                  class="screenshot-image"
+                />
+                <div class="screenshot-time" v-if="currentOrder && currentOrder.completedAt">
+                  <span class="time-label">完成时间：</span>
+                  <span class="time-value">{{ formatDateTime(currentOrder.completedAt) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 续单信息填写区域 -->
+        <div class="renew-info-section">
+          <h4 class="section-title">续单信息</h4>
+          <div class="renew-form">
+            <div class="form-row">
+              <div class="form-item">
+                <label class="form-label">续单时长：</label>
+                <el-input
+                  v-model="renewOrderData.duration"
+                  placeholder="请输入续单时长（如：2小时）"
+                  class="form-input"
+                />
+              </div>
+              <div class="form-item">
+                <label class="form-label">续单单价：</label>
+                <el-input
+                  v-model="renewOrderData.price"
+                  placeholder="请输入续单单价（如：50元/小时）"
+                  class="form-input"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -603,16 +729,8 @@
       <div v-if="currentOrder" class="reupload-content">
         <!-- 工单基本信息 -->
         <div class="order-info-section">
-          <h4 class="section-title">工单信息</h4>
+          <h4 class="section-title">单号：{{ currentOrder.orderNumber || currentOrder.id }}</h4>
           <div class="info-grid">
-            <div class="info-item">
-              <span class="info-label">单号：</span>
-              <span class="info-value">{{ currentOrder.orderNumber || currentOrder.id }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">委托人：</span>
-              <span class="info-value">{{ currentOrder.customerName }}</span>
-            </div>
             <div class="info-item">
               <span class="info-label">游戏类型：</span>
               <span class="info-value">{{ currentOrder.game }}</span>
@@ -634,6 +752,17 @@
                 {{ getStatusText(currentOrder.status) }}
               </el-tag>
             </div>
+            <!-- 续单信息显示 -->
+            <template v-if="currentOrder.additionalInfo">
+              <div class="info-item" v-if="parseRenewalInfo(currentOrder.additionalInfo).duration">
+                <span class="info-label">续单时长：</span>
+                <span class="info-value">{{ parseRenewalInfo(currentOrder.additionalInfo).duration }}</span>
+              </div>
+              <div class="info-item" v-if="parseRenewalInfo(currentOrder.additionalInfo).price">
+                <span class="info-label">续单单价：</span>
+                <span class="info-value">{{ parseRenewalInfo(currentOrder.additionalInfo).price }}</span>
+              </div>
+            </template>
           </div>
         </div>
 
@@ -667,6 +796,10 @@
                   @click="previewImage(getOrderInfoScreenshotForDialog(currentOrder))"
                   class="screenshot-image"
                 />
+                <div class="screenshot-time" v-if="currentOrder && currentOrder.createdAt">
+                  <span class="time-label">派单时间：</span>
+                  <span class="time-value">{{ formatDateTime(currentOrder.createdAt) }}</span>
+                </div>
               </div>
             </div>
 
@@ -685,6 +818,10 @@
                   @click="previewImage(getAcceptScreenshotForDialog(currentOrder))"
                   class="screenshot-image"
                 />
+                <div class="screenshot-time" v-if="currentOrder && currentOrder.acceptedAt">
+                  <span class="time-label">接单时间：</span>
+                  <span class="time-value">{{ formatDateTime(currentOrder.acceptedAt) }}</span>
+                </div>
               </div>
             </div>
             
@@ -797,16 +934,8 @@
       <div v-if="currentOrderDetail" class="audit-content">
         <!-- 工单基本信息 -->
         <div class="order-info-section">
-          <h4 class="section-title">基本信息</h4>
+          <h4 class="section-title">单号：{{ currentOrderDetail.orderNumber || currentOrderDetail.id }}</h4>
           <div class="info-grid">
-            <div class="info-item">
-              <span class="info-label">单号：</span>
-              <span class="info-value">{{ currentOrderDetail.orderNumber || currentOrderDetail.id }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">委托人：</span>
-              <span class="info-value">{{ currentOrderDetail.customerName }}</span>
-            </div>
             <div class="info-item">
               <span class="info-label">游戏类型：</span>
               <span class="info-value">{{ currentOrderDetail.game }}</span>
@@ -828,6 +957,25 @@
                 {{ getStatusText(currentOrderDetail.status) }}
               </el-tag>
             </div>
+            <!-- 续单信息显示 -->
+            <template v-if="currentOrderDetail.additionalInfo">
+              <div class="info-item" v-if="parseRenewalInfo(currentOrderDetail.additionalInfo).duration">
+                <span class="info-label">续单时长：</span>
+                <span class="info-value">{{ parseRenewalInfo(currentOrderDetail.additionalInfo).duration }}</span>
+              </div>
+              <div class="info-item" v-if="parseRenewalInfo(currentOrderDetail.additionalInfo).price">
+                <span class="info-label">续单单价：</span>
+                <span class="info-value">{{ parseRenewalInfo(currentOrderDetail.additionalInfo).price }}</span>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- 委托信息区域 -->
+        <div class="client-info-section" v-if="currentOrderDetail.clientInfo && currentOrderDetail.clientInfo.trim()">
+          <h4 class="section-title">委托信息</h4>
+          <div class="client-info-content">
+            {{ currentOrderDetail.clientInfo }}
           </div>
         </div>
 
@@ -849,6 +997,10 @@
                   @click="previewImage(getOrderInfoScreenshot())"
                   class="screenshot-image"
                 />
+                <div class="screenshot-time" v-if="currentOrderDetail && currentOrderDetail.createdAt">
+                  <span class="time-label">派单时间：</span>
+                  <span class="time-value">{{ formatDateTime(currentOrderDetail.createdAt) }}</span>
+                </div>
               </div>
             </div>
             
@@ -866,6 +1018,10 @@
                   @click="previewImage(getAcceptScreenshot())"
                   class="screenshot-image"
                 />
+                <div class="screenshot-time" v-if="currentOrderDetail && currentOrderDetail.acceptedAt">
+                  <span class="time-label">接单时间：</span>
+                  <span class="time-value">{{ formatDateTime(currentOrderDetail.acceptedAt) }}</span>
+                </div>
               </div>
             </div>
             
@@ -883,6 +1039,10 @@
                   @click="previewImage(getCompleteScreenshot())"
                   class="screenshot-image"
                 />
+                <div class="screenshot-time" v-if="currentOrderDetail && currentOrderDetail.completedAt">
+                  <span class="time-label">完成时间：</span>
+                  <span class="time-value">{{ formatDateTime(currentOrderDetail.completedAt) }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -930,6 +1090,7 @@ import { getAssignedOrders, acceptOrder, completeOrder, renewOrder, getEmployeeO
 import { getOrders, auditOrder, getEmployeeOrders } from '../api/customerService'
 import { uploadImage, validateImageFile } from '../api/upload'
 import { showImagePreview, getPreviewUrl, getImageInfo } from '../utils/imageViewer'
+import { formatDateTime } from '../utils/dateFormatter'
 import { handleApiError } from '../utils/errorHandler'
 import { usePolling, POLLING_CONFIG } from '../utils/polling'
 import authStore from '../store/auth'
@@ -980,6 +1141,13 @@ export default {
     const completeScreenshotVisible = ref(false)
     const continueOrderVisible = ref(false)
     const orderDetailVisible = ref(false)
+    
+    // 续单相关数据
+    const renewOrderData = reactive({
+      duration: '', // 续单时长
+      price: '', // 续单单价
+      additionalInfo: '' // 完整的续单信息
+    })
     const currentOrder = ref(null)
     const currentOrderDetail = ref(null)
     const acceptUploadRef = ref(null)
@@ -1113,8 +1281,8 @@ export default {
                 ...processedOrder,
                 customerName: customerMatch ? customerMatch[1].trim() : '',
                 game: gameMatch ? gameMatch[1].trim() : '',
-                playStyle: playStyleMatch ? (playStyleMatch[1].trim() === '技术型' ? 'TECHNICAL' : 'ENTERTAINMENT') : '',
-                serviceType: serviceTypeMatch ? (serviceTypeMatch[1].trim() === '排位赛' ? 'RANKED' : 'CASUAL') : ''
+                playStyle: playStyleMatch ? (playStyleMatch[1].trim() === '技术型' ? 'TECHNICAL' : playStyleMatch[1].trim() === '娱乐型' ? 'ENTERTAINMENT' : '') : '',
+                serviceType: serviceTypeMatch ? (serviceTypeMatch[1].trim() === '排位赛' ? 'RANKED' : serviceTypeMatch[1].trim() === '娱乐赛' ? 'CASUAL' : '') : ''
               }
             }
             
@@ -1257,6 +1425,20 @@ export default {
       }
       return map[type] || type || '未设置'
     }
+
+    // 解析续单信息
+    const parseRenewalInfo = (additionalInfo) => {
+      if (!additionalInfo) return { duration: '', price: '' }
+      
+      // 解析格式：续单时长：2，续单单价：111
+      const durationMatch = additionalInfo.match(/续单时长[：:]\s*([^，,]+)/)
+      const priceMatch = additionalInfo.match(/续单单价[：:]\s*([^，,]+)/)
+      
+      return {
+        duration: durationMatch ? durationMatch[1].trim() : '',
+        price: priceMatch ? priceMatch[1].trim() : ''
+      }
+    }
     
     const formatDateTime = (dateString) => {
       if (!dateString) return '-'
@@ -1367,8 +1549,8 @@ export default {
                 ...processedOrder,
                 customerName: customerMatch ? customerMatch[1].trim() : '',
                 game: gameMatch ? gameMatch[1].trim() : '',
-                playStyle: playStyleMatch ? (playStyleMatch[1].trim() === '技术型' ? 'TECHNICAL' : 'ENTERTAINMENT') : '',
-                serviceType: serviceTypeMatch ? (serviceTypeMatch[1].trim() === '排位赛' ? 'RANKED' : 'CASUAL') : ''
+                playStyle: playStyleMatch ? (playStyleMatch[1].trim() === '技术型' ? 'TECHNICAL' : playStyleMatch[1].trim() === '娱乐型' ? 'ENTERTAINMENT' : '') : '',
+                serviceType: serviceTypeMatch ? (serviceTypeMatch[1].trim() === '排位赛' ? 'RANKED' : serviceTypeMatch[1].trim() === '娱乐赛' ? 'CASUAL' : '') : ''
               }
             }
             
@@ -1384,12 +1566,7 @@ export default {
       // 数据变化处理函数
       const onOrderChange = (newData, oldData, changes) => {
         console.log('检测到工单数据变化，更新UI')
-        
-        if (changes && changes.length > 0 && !userOperationInProgress.value) {
-          // 只有在不是用户自己操作时才显示变化通知
-          ElMessage.info(`工单数据已更新 (${changes.length}个变化)`)
-        }
-        
+
         // 更新工单数据
         workRecords.value = newData
         
@@ -1492,17 +1669,35 @@ export default {
     // 显示续单确认对话框
     const showContinueOrderDialog = (order) => {
       currentOrder.value = order
+      // 重置续单表单数据
+      renewOrderData.duration = ''
+      renewOrderData.price = ''
+      renewOrderData.additionalInfo = ''
       continueOrderVisible.value = true
     }
     
     // 确认续单
     const confirmContinueOrder = async () => {
       try {
+        // 验证续单信息
+        if (!renewOrderData.duration.trim()) {
+          ElMessage.warning('请填写续单时长')
+          return
+        }
+        if (!renewOrderData.price.trim()) {
+          ElMessage.warning('请填写续单单价')
+          return
+        }
+
         userOperationInProgress.value = true // 设置用户操作标记
         console.log('开始续单，工单ID:', currentOrder.value.id)
         console.log('续单前工单状态:', currentOrder.value.status)
         
-        const response = await renewOrder(currentOrder.value.id)
+        // 组合续单信息
+        const additionalInfo = `续单时长：${renewOrderData.duration}，续单单价：${renewOrderData.price}`
+        console.log('续单信息:', additionalInfo)
+        
+        const response = await renewOrder(currentOrder.value.id, { additionalInfo })
         console.log('续单API响应:', response)
         
         if (response && (response.code === 0 || response.code === 200 || response.status === 200)) {
@@ -1625,6 +1820,17 @@ export default {
       
       // 尝试多个可能的接单截图字段名称
       return order.acceptanceScreenshotUrl || order.acceptScreenshotUrl || order.acceptImageUrl || null
+    }
+    
+    // 获取完成截图（用于对话框）
+    const getCompleteScreenshotForDialog = (order) => {
+      if (!order) return null
+      
+      console.log('获取对话框完成截图，当前工单:', order)
+      console.log('completionScreenshotUrl:', order.completionScreenshotUrl)
+      
+      // 直接使用完成截图字段
+      return order.completionScreenshotUrl || null
     }
     
     // 获取接单截图
@@ -2503,6 +2709,7 @@ export default {
       completeScreenshotVisible,
       continueOrderVisible,
       orderDetailVisible,
+      renewOrderData,
       currentOrder,
       currentOrderDetail,
       acceptUploadRef,
@@ -2542,6 +2749,7 @@ export default {
       getRejectButtonText,
       getPlayStyleLabel,
       getServiceTypeLabel,
+      parseRenewalInfo,
       formatDateTime,
       handleFilterChange,
       handleSearch,
@@ -2559,8 +2767,10 @@ export default {
       getOrderInfoScreenshot,
       getOrderInfoScreenshotForDialog,
       getAcceptScreenshotForDialog,
+      getCompleteScreenshotForDialog,
       getAcceptScreenshot,
       getCompleteScreenshot,
+      formatDateTime,
       handleAuditApprove,
       handleAuditReject,
       handleAcceptFileChange,
@@ -2910,6 +3120,27 @@ export default {
   transform: scale(1.02);
 }
 
+.screenshot-time {
+  margin-top: 8px;
+  padding: 6px 8px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #606266;
+  text-align: center;
+  border: 1px solid #e4e7ed;
+}
+
+.time-label {
+  font-weight: 500;
+  color: #909399;
+}
+
+.time-value {
+  color: #409eff;
+  font-weight: 500;
+}
+
 .screenshot-uploaded {
   position: relative;
   width: 100%;
@@ -3062,6 +3293,115 @@ export default {
 
 .continue-content {
   padding: 0;
+}
+
+.renew-info-section {
+  margin-top: 20px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.renew-form {
+  margin-top: 12px;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.form-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #606266;
+  margin-bottom: 6px;
+}
+
+.form-input {
+  width: 100%;
+}
+
+.info-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.client-info-text {
+  min-height: 40px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #495057;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-top: 4px;
+  position: relative;
+}
+
+.client-info-text::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(to bottom, #409eff, #67c23a);
+  border-radius: 8px 0 0 8px;
+}
+
+/* 委托信息区域样式 */
+.client-info-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+}
+
+.client-info-section .section-title {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #409eff;
+}
+
+.client-info-content {
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #495057;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  min-height: 60px;
+}
+
+.client-info-content::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(to bottom, #409eff, #67c23a);
+  border-radius: 8px 0 0 8px;
 }
 
 

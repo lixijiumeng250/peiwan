@@ -902,6 +902,16 @@
             placeholder="请输入游戏水平，如：王者50星（可选）"
           />
         </el-form-item>
+        <el-form-item label="委托信息">
+          <el-input
+            type="textarea"
+            v-model="assignOrderData.clientInfo"
+            placeholder="请输入委托信息（可选）"
+            :rows="3"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
         <!-- 图片资料区域 -->
         <div class="screenshots-section">
           <h4 class="section-title">图片资料</h4>
@@ -1392,6 +1402,7 @@ export default {
       employeeId: null,
       employeeName: '',
       customerName: '',
+      clientInfo: '',
       game: '',
       playStyle: '',
       serviceType: '',
@@ -1405,6 +1416,7 @@ export default {
       assignOrderData.employeeId = employee.id
       assignOrderData.employeeName = employee.name || employee.realName
       assignOrderData.customerName = ''
+      assignOrderData.clientInfo = ''
       assignOrderData.game = ''
       assignOrderData.playStyle = ''
       assignOrderData.serviceType = ''
@@ -1493,7 +1505,7 @@ export default {
     const handleAssignOrder = async () => {
       try {
         const hasScreenshot = !!assignOrderData.screenshotFile
-        const hasAnyInfo = !!(assignOrderData.customerName || assignOrderData.game || assignOrderData.playStyle || assignOrderData.serviceType || assignOrderData.gameLevel)
+        const hasAnyInfo = !!(assignOrderData.customerName || assignOrderData.clientInfo || assignOrderData.game || assignOrderData.playStyle || assignOrderData.serviceType || assignOrderData.gameLevel)
         if (!hasScreenshot && !hasAnyInfo) {
           ElMessage.warning('请至少上传截图或填写一些工单信息')
           return
@@ -1507,9 +1519,10 @@ export default {
         const orderData = {
           employeeId: assignOrderData.employeeId,
           customerName: assignOrderData.customerName || '未填写',
+          clientInfo: assignOrderData.clientInfo || '',
           game: assignOrderData.game || '未指定',
-          playStyle: assignOrderData.playStyle || 'ENTERTAINMENT',
-          serviceType: assignOrderData.serviceType || 'CASUAL',
+          playStyle: assignOrderData.playStyle || '未指定',
+          serviceType: assignOrderData.serviceType || '未指定',
           gameLevel: assignOrderData.gameLevel || '未指定',
           screenshot: screenshotUrl
         }

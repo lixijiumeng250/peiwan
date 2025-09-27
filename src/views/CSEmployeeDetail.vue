@@ -1,5 +1,20 @@
 <template>
   <div class="cs-employee-detail">
+    <!-- 通知弹窗组件 -->
+    <NotificationPopup />
+    
+    <!-- 员工状态通知弹窗（叠加支持） -->
+    <EmployeeStatusNotificationPopup
+      v-for="(stack, idx) in statusPopupStacks"
+      :key="stack.id"
+      v-model="stack.visible"
+      :notifications="stack.notifications"
+      :stack-index="idx"
+      :style="{ '--stack-index': idx }"
+      @mark-as-read="(ids) => handleStatusNotificationMarkAsRead(ids, stack.id)"
+      @go-to-employee-list="() => handleGoToEmployeeList(stack.id)"
+    />
+    
     <!-- 页面头部 -->
     <div class="page-header">
       <div class="header-left">
@@ -205,6 +220,16 @@
             placeholder="请输入游戏水平，如：王者50星（可选）"
           />
         </el-form-item>
+        <el-form-item label="委托信息">
+          <el-input
+            type="textarea"
+            v-model="assignOrderData.clientInfo"
+            placeholder="请输入委托信息（可选）"
+            :rows="3"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
         <!-- 图片资料区域 -->
         <div class="screenshots-section">
           <h4 class="section-title">图片资料</h4>
@@ -310,6 +335,10 @@ import { uploadImage, validateImageFile } from '../api/upload'
 import { getEmployeeGameSkillsForCS, getProfileForUser } from '../api/employee'
 import authStore from '../store/auth'
 import EmployeeWorkRecords from '../components/EmployeeWorkRecords.vue'
+import NotificationPopup from '../components/NotificationPopup.vue'
+import EmployeeStatusNotificationPopup from '../components/EmployeeStatusNotificationPopup.vue'
+import { useEmployeeStatusNotifications } from '../composables/useEmployeeStatusNotifications.js'
+import { useUnreadCount } from '../composables/useUnreadCount.js'
 
 export default {
   name: 'CSEmployeeDetail',
@@ -319,7 +348,9 @@ export default {
     Refresh,
     Upload,
     Plus,
-    EmployeeWorkRecords
+    EmployeeWorkRecords,
+    NotificationPopup,
+    EmployeeStatusNotificationPopup
   },
   setup() {
     const route = useRoute()
@@ -329,6 +360,71 @@ export default {
     
     // 轮询管理
     const { startPolling, stopPolling, startSmartPolling } = usePolling()
+    
+    // 使用员工状态通知组合式函数
+    const {
+      employeeStatusNotifications,
+      unreadEmployeeStatusCount,
+      fetchEmployeeStatusNotifications,
+      markEmployeeStatusNotificationAsRead,
+      markAllEmployeeStatusNotificationsAsRead,
+      getEmployeeStatusNotificationData,
+      getStatusText: getNotificationStatusText,
+      getStatusColor,
+      getStatusIcon,
+      updateEmployeeStatusNotifications
+    } = useEmployeeStatusNotifications()
+    
+    // 使用未读数量管理
+    const {
+      unreadCount,
+      fetchUnreadCount,
+      updateUnreadCount,
+      decreaseUnreadCount
+    } = useUnreadCount()
+    
+    // 员工状态通知弹窗叠加管理
+    const statusPopupStacks = ref([])
+    
+    // 监听员工状态通知变化，创建弹窗
+    watch(employeeStatusNotifications, (newNotifications, oldNotifications) => {
+      if (!Array.isArray(newNotifications)) return
+      
+      // 如果是初始加载（oldNotifications为空或undefined）
+      if (!Array.isArray(oldNotifications) || oldNotifications.length === 0) {
+        const unreadNotifications = newNotifications.filter(n => !n.isRead)
+        if (unreadNotifications.length > 0) {
+          console.log(`员工详情页初始加载发现 ${unreadNotifications.length} 条未读员工状态通知`)
+          
+          // 为初始未读通知创建弹窗栈条目
+          statusPopupStacks.value.push({
+            id: Date.now() + Math.random(),
+            notifications: unreadNotifications,
+            visible: true
+          })
+          console.log(`显示初始员工状态通知弹窗，共 ${unreadNotifications.length} 条`)
+        }
+        return
+      }
+      
+      // 找出新的未读通知（非初始加载）
+      const oldIds = new Set(oldNotifications.map(n => n.id))
+      const newUnreadNotifications = newNotifications.filter(n => 
+        !n.isRead && !oldIds.has(n.id)
+      )
+      
+      if (newUnreadNotifications.length > 0) {
+        console.log(`员工详情页发现 ${newUnreadNotifications.length} 条新的员工状态通知`)
+        
+        // 为每批未读通知创建一个叠加弹窗栈条目
+        statusPopupStacks.value.push({
+          id: Date.now() + Math.random(),
+          notifications: newUnreadNotifications,
+          visible: true
+        })
+        console.log(`显示员工状态通知弹窗(叠加)，本批 ${newUnreadNotifications.length} 条`)
+      }
+    }, { deep: true, immediate: true })
     
     // 响应式数据
     const activeTab = ref('info')
@@ -353,6 +449,7 @@ export default {
       employeeId: null,
       employeeName: '',
       customerName: '',
+      clientInfo: '',
       game: '',
       playStyle: '',
       serviceType: '',
@@ -426,10 +523,18 @@ export default {
       return new Date(dateStr).toLocaleString()
     }
     
-    const goBack = () => {
+    const goBack = async () => {
       // 返回前确保停止轮询
       console.log('goBack: 停止轮询')
       stopPollingEmployeeInfo()
+      
+      // 在返回前更新未读数量，确保返回页面时数据是最新的
+      try {
+        await fetchUnreadCount()
+        console.log('返回前已更新未读数量')
+      } catch (error) {
+        console.error('返回前更新未读数量失败:', error)
+      }
       
       // 管理员从管理员页面进入时返回管理员页，其它角色返回客服页
       const role = userRole.value?.toUpperCase()
@@ -638,6 +743,7 @@ export default {
       assignOrderData.employeeId = employeeInfo.value.id
       assignOrderData.employeeName = employeeInfo.value.realName || employeeInfo.value.username
       assignOrderData.customerName = ''
+      assignOrderData.clientInfo = ''
       assignOrderData.game = ''
       assignOrderData.playStyle = ''
       assignOrderData.serviceType = ''
@@ -750,7 +856,7 @@ export default {
       try {
         // 检查是否至少有截图或者填写了一些信息
         const hasScreenshot = !!assignOrderData.screenshotFile
-        const hasAnyInfo = !!(assignOrderData.customerName || assignOrderData.game || assignOrderData.playStyle || assignOrderData.serviceType || assignOrderData.gameLevel)
+        const hasAnyInfo = !!(assignOrderData.customerName || assignOrderData.clientInfo || assignOrderData.game || assignOrderData.playStyle || assignOrderData.serviceType || assignOrderData.gameLevel)
         
         if (!hasScreenshot && !hasAnyInfo) {
           ElMessage.warning('请至少上传截图或填写一些工单信息')
@@ -769,9 +875,10 @@ export default {
         const orderData = {
           employeeId: assignOrderData.employeeId,
           customerName: assignOrderData.customerName || '未填写',
+          clientInfo: assignOrderData.clientInfo || '未填写',
           game: assignOrderData.game || '未指定',
-          playStyle: assignOrderData.playStyle || 'ENTERTAINMENT',
-          serviceType: assignOrderData.serviceType || 'CASUAL',
+          playStyle: assignOrderData.playStyle || '未指定',
+          serviceType: assignOrderData.serviceType || '未指定',
           gameLevel: assignOrderData.gameLevel || '未指定',
           screenshot: screenshotUrl
         }
@@ -910,6 +1017,14 @@ export default {
         await loadEmployeeProfile()
         await loadGameSkills()
         
+        // 获取未读通知数量
+        try {
+          await fetchUnreadCount()
+          console.log('员工详情页面已获取未读数量')
+        } catch (error) {
+          console.error('获取未读数量失败:', error)
+        }
+        
         // 延迟启动轮询，避免与初始加载冲突
         setTimeout(() => {
           startPollingEmployeeInfo()
@@ -924,6 +1039,14 @@ export default {
       await loadEmployeeInfo()
       await loadEmployeeProfile()
       await loadGameSkills()
+      
+      // 获取未读通知数量
+      try {
+        await fetchUnreadCount()
+        console.log('员工详情页面激活时已获取未读数量')
+      } catch (error) {
+        console.error('员工详情页面激活时获取未读数量失败:', error)
+      }
       
       // 重新启动轮询
       startPollingEmployeeInfo()
@@ -953,6 +1076,53 @@ export default {
       console.log('CSEmployeeDetail onBeforeUnmount, 停止轮询')
       stopPollingEmployeeInfo()
     })
+    
+    // 员工状态通知弹窗事件处理
+    const handleStatusNotificationMarkAsRead = async (notificationIds, stackId = null) => {
+      try {
+        // 批量标记为已读
+        const promises = notificationIds.map(id => 
+          markEmployeeStatusNotificationAsRead(id)
+        )
+        await Promise.all(promises)
+        
+        // 从叠加栈中移除该弹窗
+        if (stackId) {
+          statusPopupStacks.value = statusPopupStacks.value.filter(p => p.id !== stackId)
+        }
+        
+        // 重新获取未读数量以确保数据同步
+        try {
+          await fetchUnreadCount()
+          console.log('标记已读后已更新未读数量')
+        } catch (error) {
+          console.error('更新未读数量失败:', error)
+        }
+        
+        console.log(`已处理 ${notificationIds.length} 条员工状态通知`)
+      } catch (error) {
+        console.error('处理员工状态通知失败:', error)
+        ElMessage.error('标记已读失败')
+      }
+    }
+
+    const handleGoToEmployeeList = async (stackId = null) => {
+      // 从叠加栈中移除该弹窗
+      if (stackId) {
+        statusPopupStacks.value = statusPopupStacks.value.filter(p => p.id !== stackId)
+      }
+      
+      // 在跳转前更新未读数量，确保返回客服页面时数据是最新的
+      try {
+        await fetchUnreadCount()
+        console.log('返回客服页面前已更新未读数量')
+      } catch (error) {
+        console.error('返回客服页面前更新未读数量失败:', error)
+      }
+      
+      // 跳转到客服页面
+      router.push('/customer-service')
+    }
     
     return {
       // 响应式数据
@@ -997,7 +1167,19 @@ export default {
       handleCloseAssignDialog,
       startPollingEmployeeInfo,
       stopPollingEmployeeInfo,
-      userRole
+      userRole,
+      
+      // 员工状态通知相关
+      statusPopupStacks,
+      employeeStatusNotifications,
+      unreadEmployeeStatusCount,
+      handleStatusNotificationMarkAsRead,
+      handleGoToEmployeeList,
+      
+      // 未读数量相关
+      unreadCount,
+      fetchUnreadCount,
+      updateUnreadCount
     }
   }
 }

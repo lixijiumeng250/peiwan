@@ -1,5 +1,9 @@
 <template>
   <div class="employee-page">
+    <!-- 通知弹窗组件 -->
+    <NotificationPopup />
+    
+    
     <!-- 页面头部 -->
     <div class="page-header">
       <div class="header-content">
@@ -50,8 +54,9 @@
           </template>
         </div>
         
-        <!-- 工作状态控制区域 -->
+        <!-- 右侧操作区域 -->
         <div class="header-actions">
+          <!-- 工作状态控制区域 -->
           <div class="status-control-prominent">
             <span class="status-label-prominent">工作状态</span>
             <el-select
@@ -102,11 +107,38 @@
         </el-tab-pane>
       </el-tabs>
     </div>
+
+    <!-- 通知弹窗 -->
+    <NotificationPopup
+      v-model="notificationVisible"
+      :type="notificationData.type"
+      :title="notificationData.title"
+      :message-title="notificationData.messageTitle"
+      :message="notificationData.message"
+      :details="notificationData.details"
+      :show-confirm-button="notificationData.showConfirmButton"
+      confirm-button-text="查看工单"
+      :auto-close="0"
+      @confirm="activeTab = 'records'"
+    />
+
+    <!-- 工单分配弹窗 -->
+    <!-- 叠加的工单分配弹窗队列 -->
+    <OrderAssignmentPopup
+      v-for="(stack, idx) in popupStacks"
+      :key="stack.id"
+      v-model="stack.visible"
+      :notifications="stack.notifications"
+      :stack-index="idx"
+      @mark-as-read="(ids) => handleOrderAssignmentMarkAsRead(ids, stack.id)"
+      @go-to-work-records="() => handleGoToWorkRecords(stack.id)"
+    />
+
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import { WarningFilled } from '@element-plus/icons-vue'
 import { onBeforeRouteLeave } from 'vue-router'
@@ -114,18 +146,31 @@ import authStore from '../store/auth'
 import { getProfile, getAssignedOrders, updateProfile } from '../api/employee'
 import EmployeePersonalStatus from '../components/EmployeePersonalStatus.vue'
 import EmployeeWorkRecords from '../components/EmployeeWorkRecords.vue'
-import { usePolling } from '../utils/polling'
+import { usePolling, POLLING_CONFIG } from '../utils/polling'
+import NotificationPopup from '../components/NotificationPopup.vue'
+import OrderAssignmentPopup from '../components/OrderAssignmentPopup.vue'
+import { useUnreadCount } from '../composables/useUnreadCount'
 
 export default {
   name: 'Employee',
   components: {
     EmployeePersonalStatus,
     EmployeeWorkRecords,
-    WarningFilled
+    WarningFilled,
+    NotificationPopup,
+    OrderAssignmentPopup
   },
   setup() {
     // 轮询管理
-    const { stopPolling, clearAllPolling, forceStopAllPolling, getActivePollingKeys } = usePolling()
+    const { stopPolling, clearAllPolling, forceStopAllPolling, getActivePollingKeys, startOrderSmartPolling } = usePolling()
+    
+    // 未读数量管理
+    const {
+      unreadCount,
+      fetchUnreadCount,
+      updateUnreadCount,
+      decreaseUnreadCount
+    } = useUnreadCount()
     
     // 响应式数据
     const activeTab = ref('status')
@@ -133,6 +178,137 @@ export default {
     const workRecordsRef = ref(null)
     const isUpdatingStatus = ref(false)
     const isInitializing = ref(true)
+    
+    // 通知弹窗相关
+    const notificationVisible = ref(false)
+    const notificationData = reactive({
+      type: 'info',
+      title: '通知',
+      messageTitle: '',
+      message: '',
+      details: null,
+      showConfirmButton: false
+    })
+    
+    
+    // 工单分配弹窗相关：支持多弹窗叠加
+    const orderAssignmentPopupVisible = ref(false) // 兼容保留
+    const pendingOrderNotifications = ref([])
+    const popupStacks = ref([]) // [{id, notifications}]
+    
+    // 工单通知相关变量（用于订单分配通知轮询）
+    const orderNotifications = ref([])
+    const unreadOrderCount = ref(0)
+    
+    // 订单分配通知轮询相关
+    const startOrderNotificationPolling = () => {
+      const pollingKey = `order-assignment-notifications-${currentUser.value?.id || 'employee'}`
+      const interval = POLLING_CONFIG.EMPLOYEE_ORDERS * 1000 // 使用与工单相同的轮询间隔
+      
+      console.log(`开始订单分配通知轮询，间隔: ${POLLING_CONFIG.EMPLOYEE_ORDERS}秒`)
+      
+      // 数据获取函数
+      const dataFetcher = async () => {
+        // 检查用户是否已登出
+        const isAuthenticated = authStore.getters.isAuthenticated.value
+        const isLogoutInProgress = authStore.state.isLogoutInProgress
+        
+        if (!isAuthenticated || isLogoutInProgress) {
+          console.log('🚫 用户已登出或登出进行中，停止订单分配通知轮询')
+          stopOrderNotificationPolling()
+          throw new Error('用户已登出，停止轮询')
+        }
+        
+        console.log('轮询获取订单分配通知数据...')
+        
+        try {
+          // 调用订单分配通知接口
+          const response = await fetch('/api/api/notifications/type/ORDER_ASSIGNMENT', {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json',
+              'X-User-Id': currentUser.value?.id?.toString() || ''
+            }
+          })
+          
+          if (response.ok) {
+            const result = await response.json()
+            return result.data || []
+          } else if (response.status === 401) {
+            console.log('认证失效，停止订单分配通知轮询')
+            authStore.actions.logout()
+            throw new Error('认证失效')
+          } else {
+            console.warn('获取订单分配通知失败:', response.status)
+            return []
+          }
+        } catch (error) {
+          console.error('订单分配通知轮询出错:', error)
+          throw error
+        }
+      }
+      
+      // 数据变化处理函数
+      const onNotificationChange = (newData, oldData, changes) => {
+        console.log('检测到订单分配通知数据变化:', changes)
+        
+        // 更新本地通知数据
+        if (newData && Array.isArray(newData)) {
+          // 合并新通知到现有列表
+          const existingIds = new Set(orderNotifications.value.map(n => n.id))
+          const newNotifications = newData.filter(n => !existingIds.has(n.id))
+          
+          if (newNotifications.length > 0) {
+            console.log(`发现 ${newNotifications.length} 条新的订单分配通知`)
+            
+            // 添加新通知到列表头部
+            orderNotifications.value.unshift(...newNotifications)
+            
+            // 筛选出未读的新通知
+            const unreadNewNotifications = newNotifications.filter(n => !n.isRead)
+            
+            if (unreadNewNotifications.length > 0) {
+              // 为每批未读通知创建一个叠加弹窗栈条目
+              popupStacks.value.push({
+                id: Date.now() + Math.random(),
+                notifications: unreadNewNotifications,
+                visible: true
+              })
+              console.log(`显示工单分配弹窗(叠加)，本批 ${unreadNewNotifications.length} 条`)
+            }
+          }
+          
+          // 更新现有通知的状态
+          orderNotifications.value.forEach(notification => {
+            const updatedNotification = newData.find(n => n.id === notification.id)
+            if (updatedNotification) {
+              // 更新通知状态
+              notification.isRead = updatedNotification.isRead
+              notification.readTime = updatedNotification.readTime
+            }
+          })
+          
+          // 重新计算未读数量
+          unreadOrderCount.value = orderNotifications.value.filter(n => !n.isRead).length
+        }
+      }
+      
+      // 开始智能轮询
+      startOrderSmartPolling(pollingKey, dataFetcher, onNotificationChange, interval)
+    }
+    
+    // 停止订单分配通知轮询
+    const stopOrderNotificationPolling = () => {
+      const pollingKey = `order-assignment-notifications-${currentUser.value?.id || 'employee'}`
+      console.log('🛑 停止订单分配通知轮询')
+      
+      try {
+        stopPolling(pollingKey)
+        console.log('✅ 订单分配通知轮询已停止:', pollingKey)
+      } catch (e) {
+        console.warn('⚠️ 停止订单分配通知轮询失败:', e)
+      }
+    }
     
     // 计算属性
     const currentUser = computed(() => authStore.getters.currentUser.value)
@@ -261,17 +437,113 @@ export default {
       }
     }
     
+    // 开始未读数量轮询
+    const startUnreadCountPolling = () => {
+      const pollingKey = `unread-count-${currentUser.value?.id || 'employee'}`
+      const interval = POLLING_CONFIG.EMPLOYEE_ORDERS * 1000 // 使用与工单相同的轮询间隔
+      
+      console.log(`开始未读数量轮询，间隔: ${POLLING_CONFIG.EMPLOYEE_ORDERS}秒`)
+      
+      // 数据获取函数
+      const dataFetcher = async () => {
+        // 检查用户是否已登出
+        const isAuthenticated = authStore.getters.isAuthenticated.value
+        const isLogoutInProgress = authStore.state.isLogoutInProgress
+        
+        if (!isAuthenticated || isLogoutInProgress) {
+          console.log('🚫 用户已登出或登出进行中，停止未读数量轮询')
+          stopUnreadCountPolling()
+          throw new Error('用户已登出，停止轮询')
+        }
+        
+        console.log('轮询获取未读数量...')
+        
+        try {
+          // 调用未读数量接口
+          const response = await fetch('/api/api/notifications/unread/count', {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json',
+              'X-User-Id': currentUser.value?.id?.toString() || ''
+            }
+          })
+          
+          if (response.ok) {
+            const result = await response.json()
+            return result.data || 0
+          } else if (response.status === 401) {
+            console.log('认证失效，停止未读数量轮询')
+            authStore.actions.logout()
+            throw new Error('认证失效')
+          } else {
+            console.warn('获取未读数量失败:', response.status)
+            return unreadCount.value // 返回当前值，避免重置
+          }
+        } catch (error) {
+          console.error('未读数量轮询出错:', error)
+          throw error
+        }
+      }
+      
+      // 数据变化处理函数
+      const onUnreadCountChange = (newCount, oldCount, changes) => {
+        console.log('检测到未读数量变化:', { oldCount, newCount })
+        
+        if (typeof newCount === 'number' && newCount !== oldCount) {
+          updateUnreadCount(newCount)
+          console.log(`未读数量已更新: ${newCount}`)
+        }
+      }
+      
+      // 开始智能轮询
+      startOrderSmartPolling(pollingKey, dataFetcher, onUnreadCountChange, interval)
+    }
+    
+    // 停止未读数量轮询
+    const stopUnreadCountPolling = () => {
+      const pollingKey = `unread-count-${currentUser.value?.id || 'employee'}`
+      console.log('🛑 停止未读数量轮询')
+      
+      try {
+        stopPolling(pollingKey)
+        console.log('✅ 未读数量轮询已停止:', pollingKey)
+      } catch (e) {
+        console.warn('⚠️ 停止未读数量轮询失败:', e)
+      }
+    }
+    
+    
     // 生命周期
-    onMounted(() => {
+    onMounted(async () => {
       // 初始化数据
-      initializeData()
+      await initializeData()
+      
+      // 延迟启动订单分配通知轮询，避免与初始加载冲突
+      setTimeout(() => {
+        startOrderNotificationPolling()
+        startUnreadCountPolling()
+      }, 1500)
     })
     
     // 停止所有轮询的方法
     const stopAllPolling = () => {
       console.log('🚨 Employee 停止所有轮询')
       
-      // 1. 先通知子组件停止轮询（优先级最高）
+      // 1. 先停止订单分配通知轮询
+      try {
+        stopOrderNotificationPolling()
+      } catch (e) {
+        console.warn('⚠️ 订单分配通知轮询停止失败:', e)
+      }
+      
+      // 1.5. 停止未读数量轮询
+      try {
+        stopUnreadCountPolling()
+      } catch (e) {
+        console.warn('⚠️ 未读数量轮询停止失败:', e)
+      }
+      
+      // 2. 通知子组件停止轮询（优先级最高）
       if (workRecordsRef.value && workRecordsRef.value.stopPollingData) {
         console.log('📢 通知 EmployeeWorkRecords 组件停止轮询')
         try {
@@ -281,15 +553,15 @@ export default {
         }
       }
       
-      // 2. 获取当前活跃轮询
+      // 3. 获取当前活跃轮询
       const activePolling = getActivePollingKeys()
       console.log('📊 Employee 活跃轮询列表:', activePolling)
       
-      // 3. 强制清除所有轮询（使用最强力的方法）
+      // 4. 强制清除所有轮询（使用最强力的方法）
       console.log('🧹 强制清除所有轮询（暴力模式）')
       forceStopAllPolling()
       
-      // 4. 延迟检查并再次强制清理（双重保险）
+      // 5. 延迟检查并再次强制清理（双重保险）
       setTimeout(() => {
         const stillActive = getActivePollingKeys()
         if (stillActive.length > 0) {
@@ -316,6 +588,34 @@ export default {
       stopAllPolling()
     })
     
+    
+    // 工单分配弹窗事件处理
+    const handleOrderAssignmentMarkAsRead = async (notificationIds, stackId = null) => {
+      try {
+        // 从叠加栈中移除该弹窗
+        if (stackId) {
+          popupStacks.value = popupStacks.value.filter(p => p.id !== stackId)
+        } else {
+          pendingOrderNotifications.value = []
+          orderAssignmentPopupVisible.value = false
+        }
+        
+        console.log(`已处理 ${notificationIds.length} 条工单分配通知`)
+      } catch (error) {
+        console.error('处理工单分配通知失败:', error)
+      }
+    }
+    
+    const handleGoToWorkRecords = (stackId = null) => {
+      // 切换到工作记录标签页
+      activeTab.value = 'records'
+      // 若来自叠加弹窗，关闭对应弹窗
+      if (stackId) {
+        popupStacks.value = popupStacks.value.filter(p => p.id !== stackId)
+      }
+      console.log('跳转到工作记录页面')
+    }
+    
     return {
       // 响应式数据
       activeTab,
@@ -323,6 +623,13 @@ export default {
       workRecordsRef,
       isUpdatingStatus,
       isInitializing,
+      notificationVisible,
+      notificationData,
+      
+      // 工单分配弹窗相关
+      orderAssignmentPopupVisible,
+      pendingOrderNotifications,
+      popupStacks,
       
       // 计算属性
       currentUser,
@@ -334,7 +641,23 @@ export default {
       handleStatusChange,
       refreshEmployeeStatus,
       refreshWorkRecords,
-      stopAllPolling
+      stopAllPolling,
+      
+      // 订单分配通知轮询方法
+      startOrderNotificationPolling,
+      stopOrderNotificationPolling,
+      
+      // 未读数量相关
+      unreadCount,
+      fetchUnreadCount,
+      updateUnreadCount,
+      decreaseUnreadCount,
+      startUnreadCountPolling,
+      stopUnreadCountPolling,
+      
+      // 工单分配弹窗事件处理
+      handleOrderAssignmentMarkAsRead,
+      handleGoToWorkRecords
     }
   }
 }
@@ -352,6 +675,7 @@ export default {
   padding: 12px;
   margin-bottom: 12px;
 }
+
 
 .header-content {
   display: flex;
@@ -532,6 +856,7 @@ export default {
 .employee-tabs :deep(.el-tabs__content) {
   padding: 0;
 }
+
 
 /* 响应式设计 */
 @media (max-width: 768px) {

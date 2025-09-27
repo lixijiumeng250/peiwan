@@ -234,11 +234,13 @@ export const resubmitOrder = async (orderId, resubmitData) => {
 /**
  * 续单
  * @param {number} orderId - 工单ID
+ * @param {Object} renewData - 续单数据
+ * @param {string} renewData.additionalInfo - 续单信息（时长和单价）
  * @returns {Promise} 续单结果
  */
-export const renewOrder = async (orderId) => {
+export const renewOrder = async (orderId, renewData = {}) => {
   try {
-    const response = await http.post(`/employee/orders/${orderId}/renew`)
+    const response = await http.post(`/employee/orders/${orderId}/renew`, renewData)
     return response
   } catch (error) {
     console.error('续单失败:', error)
