@@ -78,13 +78,13 @@ export const getGameSkills = async () => {
  */
 export const getEmployeeGameSkillsForCS = async (userId) => {
   try {
-    console.log('客服获取员工游戏技能，设置X-User-Id为:', userId)
+    // console.log('客服获取员工游戏技能，设置X-User-Id为:', userId)
     const response = await http.get('/employee/game-skills', {
       headers: {
         'X-User-Id': userId
       }
     })
-    console.log('游戏技能API响应:', response)
+    // console.log('游戏技能API响应:', response)
     return response
   } catch (error) {
     console.error('客服获取员工游戏技能失败:', error)
@@ -99,13 +99,13 @@ export const getEmployeeGameSkillsForCS = async (userId) => {
  */
 export const getEmployeeOrdersForCS = async (userId) => {
   try {
-    console.log('客服获取员工工单列表，设置X-User-Id为:', userId)
+    // console.log('客服获取员工工单列表，设置X-User-Id为:', userId)
     const response = await http.get('/employee/orders', {
       headers: {
         'X-User-Id': userId
       }
     })
-    console.log('员工工单API响应:', response)
+    // console.log('员工工单API响应:', response)
     return response
   } catch (error) {
     console.error('客服获取员工工单失败:', error)
@@ -120,13 +120,13 @@ export const getEmployeeOrdersForCS = async (userId) => {
  */
 export const getEmployeeOrdersForAdmin = async (userId) => {
   try {
-    console.log('管理员获取员工工单列表，设置X-User-Id为:', userId)
+    // console.log('管理员获取员工工单列表，设置X-User-Id为:', userId)
     const response = await http.get('/employee/orders', {
       headers: {
         'X-User-Id': userId
       }
     })
-    console.log('管理员获取员工工单API响应:', response)
+    // console.log('管理员获取员工工单API响应:', response)
     return response
   } catch (error) {
     console.error('管理员获取员工工单失败:', error)
@@ -177,12 +177,12 @@ export const getAssignedOrders = async () => {
  */
 export const acceptOrder = async (orderId, acceptData) => {
   try {
-    console.log('调用接单API - orderId:', orderId, '类型:', typeof orderId)
-    console.log('调用接单API - acceptData:', acceptData)
-    console.log('请求URL:', `/employee/orders/${orderId}/accept`)
+    // console.log('调用接单API - orderId:', orderId, '类型:', typeof orderId)
+    // console.log('调用接单API - acceptData:', acceptData)
+    // console.log('请求URL:', `/employee/orders/${orderId}/accept`)
     
     const response = await http.post(`/employee/orders/${orderId}/accept`, acceptData)
-    console.log('接单API响应:', response)
+    // console.log('接单API响应:', response)
     return response
   } catch (error) {
     console.error('接单失败:', error)
@@ -217,13 +217,13 @@ export const completeOrder = async (orderId, completeData) => {
  */
 export const resubmitOrder = async (orderId, resubmitData) => {
   try {
-    console.log('调用重新提交API - orderId:', orderId, '类型:', typeof orderId)
-    console.log('调用重新提交API - resubmitData:', resubmitData)
-    console.log('请求URL:', `/employee/orders/${orderId}/reSubmit`)
+    // console.log('调用重新提交API - orderId:', orderId, '类型:', typeof orderId)
+    // console.log('调用重新提交API - resubmitData:', resubmitData)
+    // console.log('请求URL:', `/employee/orders/${orderId}/reSubmit`)
     
     // 使用专门的重新提交接口
     const response = await http.post(`/employee/orders/${orderId}/reSubmit`, resubmitData)
-    console.log('重新提交API响应:', response)
+    // console.log('重新提交API响应:', response)
     return response
   } catch (error) {
     console.error('重新提交工单失败:', error)

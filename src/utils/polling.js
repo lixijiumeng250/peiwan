@@ -39,7 +39,7 @@ class PollingManager {
     }, interval)
     
     this.timers.set(key, timer)
-    console.log(`开始轮询: ${key}, 间隔: ${interval}ms`)
+    // console.log(`开始轮询: ${key}, 间隔: ${interval}ms`)
   }
 
   // 开始智能轮询（带数据比对）
@@ -55,7 +55,7 @@ class PollingManager {
           
           // 比对数据是否发生变化
           if (this.hasDataChanged(cachedData, newData)) {
-            console.log(`检测到数据变化: ${key}`)
+            // console.log(`检测到数据变化: ${key}`)
             
             // 详细记录变化内容
             let changes = []
@@ -66,7 +66,7 @@ class PollingManager {
             this.dataCache.set(key, this.cloneData(newData))
             onDataChange(newData, cachedData, changes)
           } else {
-            console.log(`数据未变化: ${key}`)
+            // console.log(`数据未变化: ${key}`)
           }
         } catch (error) {
           console.warn(`智能轮询出错 ${key}:`, error)
@@ -75,7 +75,7 @@ class PollingManager {
     }, interval)
     
     this.timers.set(key, timer)
-    console.log(`开始智能轮询: ${key}, 间隔: ${interval}ms`)
+    // console.log(`开始智能轮询: ${key}, 间隔: ${interval}ms`)
     
     // 立即执行一次以获取初始数据
     if (this.isPageVisible) {
@@ -100,7 +100,7 @@ class PollingManager {
           
           // 比对数据是否发生变化
           if (this.hasDataChanged(cachedData, newData)) {
-            console.log(`检测到工单数据变化: ${key}`)
+            // console.log(`检测到工单数据变化: ${key}`)
             
             // 详细记录工单变化内容
             let changes = []
@@ -125,7 +125,7 @@ class PollingManager {
     }, interval)
     
     this.timers.set(key, timer)
-    console.log(`开始工单智能轮询: ${key}, 间隔: ${interval}ms`)
+    // console.log(`开始工单智能轮询: ${key}, 间隔: ${interval}ms`)
     
     // 立即执行一次以获取初始数据
     if (this.isPageVisible) {
@@ -145,29 +145,29 @@ class PollingManager {
       this.timers.delete(key)
       // 清除缓存数据
       this.dataCache.delete(key)
-      console.log(`停止轮询: ${key}`)
+      // console.log(`停止轮询: ${key}`)
     }
   }
 
   // 暂停所有轮询
   pauseAllPolling() {
-    console.log('页面隐藏，暂停所有轮询')
+    // console.log('页面隐藏，暂停所有轮询')
   }
 
   // 刷新所有轮询
   refreshAllPolling() {
-    console.log('页面可见，刷新所有轮询')
+    // console.log('页面可见，刷新所有轮询')
   }
 
   // 清除所有轮询
   clearAllPolling() {
-    console.log(`🧹 开始清除所有轮询，当前活跃轮询数量: ${this.timers.size}`)
-    console.log(`🧹 活跃轮询键列表:`, Array.from(this.timers.keys()))
+    // console.log(`🧹 开始清除所有轮询，当前活跃轮询数量: ${this.timers.size}`)
+    // console.log(`🧹 活跃轮询键列表:`, Array.from(this.timers.keys()))
     
     this.timers.forEach((timer, key) => {
       try {
         clearInterval(timer)
-        console.log(`✅ 已清除轮询: ${key}`)
+        // console.log(`✅ 已清除轮询: ${key}`)
       } catch (e) {
         console.warn(`⚠️ 清除轮询失败 ${key}:`, e)
       }
@@ -176,7 +176,7 @@ class PollingManager {
     
     // 清除所有缓存数据
     this.dataCache.clear()
-    console.log(`🧹 轮询清理完成，剩余轮询数量: ${this.timers.size}`)
+    // console.log(`🧹 轮询清理完成，剩余轮询数量: ${this.timers.size}`)
     
     // 额外保险：延迟检查是否有残留轮询
     setTimeout(() => {
@@ -185,7 +185,7 @@ class PollingManager {
         this.timers.forEach((timer, key) => {
           try {
             clearInterval(timer)
-            console.log(`🔄 重新清除轮询: ${key}`)
+            // console.log(`🔄 重新清除轮询: ${key}`)
           } catch (e) {
             console.warn(`⚠️ 重新清除轮询失败 ${key}:`, e)
           }
@@ -264,7 +264,7 @@ class PollingManager {
           this.logEmployeeListChanges(key, oldData, newData)
         }
       } else {
-        console.log(`${key} 数据结构发生变化`)
+        // console.log(`${key} 数据结构发生变化`)
       }
     } catch (error) {
       console.warn('记录数据变化失败:', error)
@@ -306,8 +306,8 @@ class PollingManager {
     })
     
     if (changes.length > 0) {
-      console.log(`📋 ${key} 变化详情:`)
-      changes.forEach(change => console.log(`  ${change}`))
+      // console.log(`📋 ${key} 变化详情:`)
+      // changes.forEach(change => console.log(`  ${change}`))
     }
   }
 
@@ -348,8 +348,8 @@ class PollingManager {
     })
     
     if (changes.length > 0) {
-      console.log(`📋 ${key} 工单变化详情:`)
-      changes.forEach(change => console.log(`  ${change}`))
+      // console.log(`📋 ${key} 工单变化详情:`)
+      // changes.forEach(change => console.log(`  ${change}`))
       return changes
     }
     
@@ -491,13 +491,13 @@ const pollingManager = new PollingManager()
 
 // 全局强制清理函数（用于紧急情况）
 export const forceStopAllPolling = () => {
-  console.log('🚨 强制停止所有轮询 - 紧急清理模式')
+  // console.log('🚨 强制停止所有轮询 - 紧急清理模式')
   
   // 清理轮询管理器中的定时器
   pollingManager.clearAllPolling()
   
   // 额外保险：清理所有可能的定时器ID（暴力清理）
-  console.log('🚨 开始暴力清理所有定时器...')
+  // console.log('🚨 开始暴力清理所有定时器...')
   const maxTimerId = setTimeout(() => {}, 0)
   let clearedCount = 0
   
@@ -512,7 +512,7 @@ export const forceStopAllPolling = () => {
   }
   clearTimeout(maxTimerId)
   
-  console.log(`🚨 强制清理完成，共清理了 ${clearedCount} 个定时器`)
+  // console.log(`🚨 强制清理完成，共清理了 ${clearedCount} 个定时器`)
   
   // 最终检查
   setTimeout(() => {
@@ -520,7 +520,7 @@ export const forceStopAllPolling = () => {
     if (remainingPolling.length > 0) {
       console.error('🚨 警告：强制清理后仍有残留轮询:', remainingPolling)
     } else {
-      console.log('✅ 确认：所有轮询已彻底清理')
+      // console.log('✅ 确认：所有轮询已彻底清理')
     }
   }, 200)
 }
@@ -596,13 +596,13 @@ if (import.meta.env.DEV) {
     forceStopAll: () => forceStopAllPolling(),
     getTimersCount: () => pollingManager.timers.size,
     showStatus: () => {
-      console.log('🔍 轮询状态检查:')
-      console.log('活跃轮询数量:', pollingManager.timers.size)
-      console.log('活跃轮询列表:', pollingManager.getActivePollingKeys())
-      console.log('缓存数据数量:', pollingManager.dataCache.size)
+      // console.log('🔍 轮询状态检查:')
+      // console.log('活跃轮询数量:', pollingManager.timers.size)
+      // console.log('活跃轮询列表:', pollingManager.getActivePollingKeys())
+      // console.log('缓存数据数量:', pollingManager.dataCache.size)
     }
   }
-  console.log('🛠️ 开发模式：全局轮询调试工具已加载 (window.debugPolling)')
+  // console.log('🛠️ 开发模式：全局轮询调试工具已加载 (window.debugPolling)')
 }
 
 export default pollingManager

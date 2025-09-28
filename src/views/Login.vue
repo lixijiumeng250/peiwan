@@ -80,7 +80,7 @@ export default {
         username: '',
         password: ''
       },
-      rememberMe: false,
+      rememberMe: true,
       errors: {},
       showPassword: false
     }
@@ -251,12 +251,9 @@ export default {
             this.rememberMe = true
             
             const remainingDays = Math.ceil((expireTime - now) / (24 * 60 * 60 * 1000))
-            console.log('✅ 自动填充记住的用户名:', user.username)
-            console.log(`✅ 七天内保持登录还有 ${remainingDays} 天有效期`)
           }
         } else {
           // 已过期，清除数据
-          console.log('🕒 七天内保持登录已过期，清除数据')
           localStorage.removeItem('remembered_user')
           localStorage.removeItem('remember_login')
           localStorage.removeItem('remember_expire')

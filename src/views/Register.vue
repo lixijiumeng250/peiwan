@@ -272,14 +272,9 @@ export default {
       
       // 调用API检查用户名可用性
       this.usernameValidationStatus.loading = true
-      console.log('正在检查用户名可用性:', username)
       
       try {
         const response = await checkUsernameAvailability(username)
-        console.log('用户名验证API完整响应:', response)
-        console.log('响应code:', response?.code)
-        console.log('响应data:', response?.data)
-        console.log('响应类型:', typeof response?.data)
         
         // 检查响应格式 - 兼容 code 0 和 200
         const isSuccessCode = response && (response.code === 0 || response.code === 200)
@@ -351,14 +346,9 @@ export default {
       
       // 调用API检查手机号可用性
       this.phoneValidationStatus.loading = true
-      console.log('正在检查手机号可用性:', phone)
       
       try {
         const response = await checkPhoneAvailability(phone)
-        console.log('手机号验证API完整响应:', response)
-        console.log('响应code:', response?.code)
-        console.log('响应data:', response?.data)
-        console.log('响应类型:', typeof response?.data)
         
         // 检查响应格式 - 兼容 code 0 和 200
         const isSuccessCode = response && (response.code === 0 || response.code === 200)

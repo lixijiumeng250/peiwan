@@ -28,7 +28,7 @@ class ErrorHandler {
     
     // 如果是认证取消错误，不处理
     if (error.isAuthCancel) {
-      console.log('忽略认证取消错误')
+      // console.log('忽略认证取消错误')
       return
     }
     
@@ -118,7 +118,7 @@ class ErrorHandler {
     const timeSinceLogout = Date.now() - lastLogoutTime
     
     if (isLogoutInProgress || timeSinceLogout < 100) {
-      console.log('🚪 登出期间的认证错误，不显示错误提示')
+      // console.log('🚪 登出期间的认证错误，不显示错误提示')
     } else {
       ElMessage.error(errorInfo.message)
     }
@@ -131,7 +131,7 @@ class ErrorHandler {
       const { usePolling } = require('./polling')
       const { clearAllPolling } = usePolling()
       clearAllPolling()
-      console.log('认证错误：已清除所有轮询定时器')
+      // console.log('认证错误：已清除所有轮询定时器')
     } catch (e) {
       console.warn('清除轮询失败', e)
     }
@@ -169,7 +169,7 @@ class ErrorHandler {
   handleNetworkError(errorInfo, context) {
     // 检查配置是否允许显示网络错误
     if (!config.errorHandling?.showNetworkErrors) {
-      console.log('网络错误已被配置隐藏:', errorInfo.message)
+      // console.log('网络错误已被配置隐藏:', errorInfo.message)
       return
     }
     
@@ -273,13 +273,13 @@ export const handleError = (error, context) => {
 export const handleApiError = (error, context = {}) => {
   // 如果是认证取消错误，静默处理
   if (error.isAuthCancel || (error.message && error.message.includes('用户未认证'))) {
-    console.log('静默处理认证错误:', error.message)
+    // console.log('静默处理认证错误:', error.message)
     return false // 返回false表示错误已被静默处理
   }
   
   // 如果是axios取消错误，静默处理
   if (error.code === 'ERR_CANCELED' || error.message?.includes('canceled')) {
-    console.log('静默处理取消错误:', error.message)
+    // console.log('静默处理取消错误:', error.message)
     return false
   }
   

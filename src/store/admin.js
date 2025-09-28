@@ -117,7 +117,7 @@ const actions = {
       const response = await adminAPI.getUsers()
       
       if ((response.code === 0 || response.code === 200) && response.data) {
-        console.log('Admin Store - 获取用户列表成功:', response.data)
+        // console.log('Admin Store - 获取用户列表成功:', response.data)
         state.users = response.data || []
         
         // 更新分页信息
@@ -152,18 +152,18 @@ const actions = {
       this.setLoading('createUser', true)
       this.clearError()
       
-      console.log('Admin Store - 开始创建客服用户:', userData)
+      // console.log('Admin Store - 开始创建客服用户:', userData)
       const response = await adminAPI.createUser(userData)
       
       // 根据API文档，成功响应的code应该为0或200
       if (response.code === 0 || response.code === 200) {
-        console.log('Admin Store - 客服用户创建成功:', {
-          code: response.code,
-          message: response.message,
-          data: response.data,
-          timestamp: response.timestamp,
-          requestId: response.requestId
-        })
+        // console.log('Admin Store - 客服用户创建成功:', {
+        //   code: response.code,
+        //   message: response.message,
+        //   data: response.data,
+        //   timestamp: response.timestamp,
+        //   requestId: response.requestId
+        // })
         
         // 创建成功后，刷新用户列表
         await this.fetchUsers()

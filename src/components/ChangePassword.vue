@@ -180,7 +180,7 @@ const handleSubmit = async () => {
       confirmPassword: formData.confirmPassword
     }
     
-    console.log('提交修改密码请求')
+    // console.log('提交修改密码请求')
     const result = await authStore.actions.changePassword(changePasswordData)
     
     if (result.success) {
@@ -193,7 +193,7 @@ const handleSubmit = async () => {
       
       // 记录请求ID（如果有）
       if (result.requestId) {
-        console.log('修改密码请求ID:', result.requestId)
+        // console.log('修改密码请求ID:', result.requestId)
       }
       
       // 提示用户重新登录

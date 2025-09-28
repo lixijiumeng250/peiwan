@@ -11,11 +11,11 @@ let cancelTokenSource = null
 // 重置取消令牌
 export const resetCancelToken = () => {
   if (cancelTokenSource) {
-    console.log('🚫 取消所有正在进行的HTTP请求')
+    // console.log('🚫 取消所有正在进行的HTTP请求')
     cancelTokenSource.cancel('用户退出登录，取消所有请求')
   }
   cancelTokenSource = axios.CancelToken.source()
-  console.log('🔄 已重置HTTP取消令牌')
+  // console.log('🔄 已重置HTTP取消令牌')
 }
 
 // 创建axios实例（基于 Cookie 的单会话鉴权）
@@ -44,7 +44,7 @@ http.interceptors.request.use(
     const isAuthUrl = authUrls.some(url => config.url === url)
     
     if ((isLogoutInProgress || timeSinceLogout < 100) && isAuthUrl) {
-      console.log('🚫 阻止登出期间的认证请求:', config.url, config.method?.toUpperCase())
+      // console.log('🚫 阻止登出期间的认证请求:', config.url, config.method?.toUpperCase())
       const error = new Error('用户正在登出，取消认证请求')
       error.isAuthCancel = true // 标记为认证取消错误，避免错误提示
       return Promise.reject(error)
@@ -60,7 +60,7 @@ http.interceptors.request.use(
     }
     
     // 记录所有请求
-    console.log(`📤 HTTP请求: ${config.method?.toUpperCase()} ${config.url}`)
+    // console.log(`📤 HTTP请求: ${config.method?.toUpperCase()} ${config.url}`)
     
     // 添加取消令牌到每个请求
     if (cancelTokenSource) {
@@ -81,13 +81,13 @@ http.interceptors.request.use(
     // 只在用户已认证且有用户信息时才添加X-User-Id
     if (!hasExplicitXUserId && isAuthenticated && currentUser && currentUser.id) {
       config.headers['X-User-Id'] = currentUser.id
-      console.log(`📋 自动添加X-User-Id: ${currentUser.id} (${currentUser.username}, ${currentUser.role})`)
+      // console.log(`📋 自动添加X-User-Id: ${currentUser.id} (${currentUser.username}, ${currentUser.role})`)
     } else if (hasExplicitXUserId) {
       // 记录但不覆盖，便于排查"代查员工"的场景
       const effective = config.headers['X-User-Id'] ?? config.headers['x-user-id']
-      console.log(`🔐 保留请求自带X-User-Id: ${effective}`)
+      // console.log(`🔐 保留请求自带X-User-Id: ${effective}`)
     } else if (!isAuthenticated) {
-      console.log(`🚫 用户未认证，跳过X-User-Id添加`)
+      // console.log(`🚫 用户未认证，跳过X-User-Id添加`)
     }
     
     // 基于 Cookie 的会话，不再附加 Authorization 头
@@ -105,22 +105,22 @@ http.interceptors.request.use(
 http.interceptors.response.use(
   (response) => {
     // 记录所有响应
-    console.log(`📥 HTTP响应: ${response.config.method?.toUpperCase()} ${response.config.url} - 状态: ${response.status}`)
+    // console.log(`📥 HTTP响应: ${response.config.method?.toUpperCase()} ${response.config.url} - 状态: ${response.status}`)
     
     // 检查是否是登出接口的成功响应
     if (response.config.url && response.config.url.includes('/auth/logout') && 
         response.config.method === 'post') {
-      console.log('🚪 检测到登出接口成功响应，立即停止所有轮询')
+      // console.log('🚪 检测到登出接口成功响应，立即停止所有轮询')
       try {
         const { forceStopAllPolling, getActivePollingKeys } = usePolling()
         const activePolling = getActivePollingKeys()
-        console.log('📊 登出响应时活跃轮询:', activePolling)
+        // console.log('📊 登出响应时活跃轮询:', activePolling)
         
         if (activePolling.length > 0) {
-          console.log('🚨 立即强制停止所有轮询')
+          // console.log('🚨 立即强制停止所有轮询')
           forceStopAllPolling()
         } else {
-          console.log('✅ 无活跃轮询需要清理')
+          // console.log('✅ 无活跃轮询需要清理')
         }
       } catch (e) {
         console.warn('⚠️ 登出响应时清理轮询失败:', e)
@@ -136,17 +136,17 @@ http.interceptors.response.use(
   },
   (error) => {
     // 记录错误响应
-    console.log(`❌ HTTP错误: ${error.config?.method?.toUpperCase()} ${error.config?.url} - 状态: ${error.response?.status || 'Network Error'}`)
+    // console.log(`❌ HTTP错误: ${error.config?.method?.toUpperCase()} ${error.config?.url} - 状态: ${error.response?.status || 'Network Error'}`)
     
     // 如果是请求被取消，不显示错误信息
     if (axios.isCancel(error)) {
-      console.log('请求被取消:', error.message)
+      // console.log('请求被取消:', error.message)
       return Promise.reject(error)
     }
     
     // 如果是认证取消错误，不显示错误信息
     if (error.isAuthCancel) {
-      console.log('认证取消:', error.message)
+      // console.log('认证取消:', error.message)
       return Promise.reject(error)
     }
     

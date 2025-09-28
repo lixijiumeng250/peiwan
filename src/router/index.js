@@ -77,7 +77,7 @@ router.beforeEach(async (to, from, next) => {
   const timeSinceLogout = Date.now() - lastLogoutTime
   
   if (isLogoutInProgress || timeSinceLogout < 100) {
-    console.log('🚪 检测到登出状态，强制清理轮询并跳转到登录页')
+    // console.log('🚪 检测到登出状态，强制清理轮询并跳转到登录页')
     
     // 强制清除所有轮询
     const { forceStopAllPolling } = usePolling()
@@ -95,7 +95,7 @@ router.beforeEach(async (to, from, next) => {
     const { clearAllPolling, forceStopAllPolling, getActivePollingKeys } = usePolling()
     
     const activePolling = getActivePollingKeys()
-    console.log('🔄 跳转到登录页面，当前活跃轮询:', activePolling)
+    // console.log('🔄 跳转到登录页面，当前活跃轮询:', activePolling)
     
     if (activePolling.length > 0) {
       clearAllPolling()
@@ -104,13 +104,13 @@ router.beforeEach(async (to, from, next) => {
       setTimeout(() => {
         const stillActive = getActivePollingKeys()
         if (stillActive.length > 0) {
-          console.log('🚨 路由跳转时发现残留轮询，启动强制清理:', stillActive)
+          // console.log('🚨 路由跳转时发现残留轮询，启动强制清理:', stillActive)
           forceStopAllPolling()
         }
       }, 50)
     }
     
-    console.log('🔄 登录页面轮询清理完成')
+    // console.log('🔄 登录页面轮询清理完成')
   }
   
   // 检查是否需要认证
@@ -123,7 +123,7 @@ router.beforeEach(async (to, from, next) => {
         const timeSinceLogout = Date.now() - lastLogoutTime
         
         if (isLogoutInProgress || timeSinceLogout < 100) {
-          console.log('🚪 刚刚登出或正在登出中，直接重定向到登录页，跳过认证检查')
+          // console.log('🚪 刚刚登出或正在登出中，直接重定向到登录页，跳过认证检查')
           next({
             path: '/',
             query: { redirect: to.fullPath }
@@ -131,21 +131,21 @@ router.beforeEach(async (to, from, next) => {
           return
         }
         
-        console.log('🔐 需要认证检查，当前无用户信息，调用 fetchCurrentUser')
+        // console.log('🔐 需要认证检查，当前无用户信息，调用 fetchCurrentUser')
         const ok = await authStore.actions.fetchCurrentUser()
         if (!ok) {
           // 未登录，重定向到根路径（登录页）
-          console.log('🔐 认证检查失败，重定向到登录页')
+          // console.log('🔐 认证检查失败，重定向到登录页')
           next({
             path: '/',
             query: { redirect: to.fullPath }
           })
           return
         }
-        console.log('🔐 认证检查成功，继续路由')
+        // console.log('🔐 认证检查成功，继续路由')
       } catch (error) {
         // 认证检查失败，重定向到登录页
-        console.log('🔐 认证检查异常，重定向到登录页:', error.message)
+        // console.log('🔐 认证检查异常，重定向到登录页:', error.message)
         next({
           path: '/',
           query: { redirect: to.fullPath }
@@ -197,7 +197,7 @@ router.beforeEach(async (to, from, next) => {
     const timeSinceLogout = Date.now() - lastLogoutTime
     
     if (isLogoutInProgress || timeSinceLogout < 100) {
-      console.log('🚪 刚刚登出或正在登出中，显示登录页')
+      // console.log('🚪 刚刚登出或正在登出中，显示登录页')
       next()
       return
     }
@@ -205,7 +205,7 @@ router.beforeEach(async (to, from, next) => {
     // 如果内存中已有用户信息，直接重定向
     if (authStore.getters.isAuthenticated.value) {
       const userRole = authStore.getters.userRole.value?.toUpperCase()
-      console.log('🔄 已登录用户访问根路径，重定向到对应页面，角色:', userRole)
+      // console.log('🔄 已登录用户访问根路径，重定向到对应页面，角色:', userRole)
       
       if (userRole === 'ADMIN') {
         next({ name: 'Admin' })
@@ -221,7 +221,7 @@ router.beforeEach(async (to, from, next) => {
     
     // 如果内存中没有用户信息，直接显示登录页
     // 认证状态初始化已在 main.js 中完成，这里不需要再次调用后端接口
-    console.log('🔍 访问登录页面，内存中无用户信息，显示登录页')
+    // console.log('🔍 访问登录页面，内存中无用户信息，显示登录页')
     next()
     return
   }

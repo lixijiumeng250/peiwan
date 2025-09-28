@@ -205,7 +205,7 @@ export default {
       const pollingKey = `order-assignment-notifications-${currentUser.value?.id || 'employee'}`
       const interval = POLLING_CONFIG.EMPLOYEE_ORDERS * 1000 // 使用与工单相同的轮询间隔
       
-      console.log(`开始订单分配通知轮询，间隔: ${POLLING_CONFIG.EMPLOYEE_ORDERS}秒`)
+      // console.log(`开始订单分配通知轮询，间隔: ${POLLING_CONFIG.EMPLOYEE_ORDERS}秒`)
       
       // 数据获取函数
       const dataFetcher = async () => {
@@ -214,12 +214,12 @@ export default {
         const isLogoutInProgress = authStore.state.isLogoutInProgress
         
         if (!isAuthenticated || isLogoutInProgress) {
-          console.log('🚫 用户已登出或登出进行中，停止订单分配通知轮询')
+          // console.log('🚫 用户已登出或登出进行中，停止订单分配通知轮询')
           stopOrderNotificationPolling()
           throw new Error('用户已登出，停止轮询')
         }
         
-        console.log('轮询获取订单分配通知数据...')
+        // console.log('轮询获取订单分配通知数据...')
         
         try {
           // 调用订单分配通知接口
@@ -235,7 +235,7 @@ export default {
             const result = await response.json()
             return result.data || []
           } else if (response.status === 401) {
-            console.log('认证失效，停止订单分配通知轮询')
+            // console.log('认证失效，停止订单分配通知轮询')
             authStore.actions.logout()
             throw new Error('认证失效')
           } else {
@@ -250,7 +250,7 @@ export default {
       
       // 数据变化处理函数
       const onNotificationChange = (newData, oldData, changes) => {
-        console.log('检测到订单分配通知数据变化:', changes)
+        // console.log('检测到订单分配通知数据变化:', changes)
         
         // 更新本地通知数据
         if (newData && Array.isArray(newData)) {
@@ -259,7 +259,7 @@ export default {
           const newNotifications = newData.filter(n => !existingIds.has(n.id))
           
           if (newNotifications.length > 0) {
-            console.log(`发现 ${newNotifications.length} 条新的订单分配通知`)
+            // console.log(`发现 ${newNotifications.length} 条新的订单分配通知`)
             
             // 添加新通知到列表头部
             orderNotifications.value.unshift(...newNotifications)
@@ -274,7 +274,7 @@ export default {
                 notifications: unreadNewNotifications,
                 visible: true
               })
-              console.log(`显示工单分配弹窗(叠加)，本批 ${unreadNewNotifications.length} 条`)
+              // console.log(`显示工单分配弹窗(叠加)，本批 ${unreadNewNotifications.length} 条`)
             }
           }
           
@@ -300,11 +300,11 @@ export default {
     // 停止订单分配通知轮询
     const stopOrderNotificationPolling = () => {
       const pollingKey = `order-assignment-notifications-${currentUser.value?.id || 'employee'}`
-      console.log('🛑 停止订单分配通知轮询')
+      // console.log('🛑 停止订单分配通知轮询')
       
       try {
         stopPolling(pollingKey)
-        console.log('✅ 订单分配通知轮询已停止:', pollingKey)
+        // console.log('✅ 订单分配通知轮询已停止:', pollingKey)
       } catch (e) {
         console.warn('⚠️ 停止订单分配通知轮询失败:', e)
       }
@@ -442,7 +442,7 @@ export default {
       const pollingKey = `unread-count-${currentUser.value?.id || 'employee'}`
       const interval = POLLING_CONFIG.EMPLOYEE_ORDERS * 1000 // 使用与工单相同的轮询间隔
       
-      console.log(`开始未读数量轮询，间隔: ${POLLING_CONFIG.EMPLOYEE_ORDERS}秒`)
+      // console.log(`开始未读数量轮询，间隔: ${POLLING_CONFIG.EMPLOYEE_ORDERS}秒`)
       
       // 数据获取函数
       const dataFetcher = async () => {
@@ -451,12 +451,12 @@ export default {
         const isLogoutInProgress = authStore.state.isLogoutInProgress
         
         if (!isAuthenticated || isLogoutInProgress) {
-          console.log('🚫 用户已登出或登出进行中，停止未读数量轮询')
+          // console.log('🚫 用户已登出或登出进行中，停止未读数量轮询')
           stopUnreadCountPolling()
           throw new Error('用户已登出，停止轮询')
         }
         
-        console.log('轮询获取未读数量...')
+        // console.log('轮询获取未读数量...')
         
         try {
           // 调用未读数量接口
@@ -472,7 +472,7 @@ export default {
             const result = await response.json()
             return result.data || 0
           } else if (response.status === 401) {
-            console.log('认证失效，停止未读数量轮询')
+            // console.log('认证失效，停止未读数量轮询')
             authStore.actions.logout()
             throw new Error('认证失效')
           } else {
@@ -487,11 +487,11 @@ export default {
       
       // 数据变化处理函数
       const onUnreadCountChange = (newCount, oldCount, changes) => {
-        console.log('检测到未读数量变化:', { oldCount, newCount })
+        // console.log('检测到未读数量变化:', { oldCount, newCount })
         
         if (typeof newCount === 'number' && newCount !== oldCount) {
           updateUnreadCount(newCount)
-          console.log(`未读数量已更新: ${newCount}`)
+          // console.log(`未读数量已更新: ${newCount}`)
         }
       }
       
@@ -502,11 +502,11 @@ export default {
     // 停止未读数量轮询
     const stopUnreadCountPolling = () => {
       const pollingKey = `unread-count-${currentUser.value?.id || 'employee'}`
-      console.log('🛑 停止未读数量轮询')
+      // console.log('🛑 停止未读数量轮询')
       
       try {
         stopPolling(pollingKey)
-        console.log('✅ 未读数量轮询已停止:', pollingKey)
+        // console.log('✅ 未读数量轮询已停止:', pollingKey)
       } catch (e) {
         console.warn('⚠️ 停止未读数量轮询失败:', e)
       }
@@ -527,7 +527,7 @@ export default {
     
     // 停止所有轮询的方法
     const stopAllPolling = () => {
-      console.log('🚨 Employee 停止所有轮询')
+      // console.log('🚨 Employee 停止所有轮询')
       
       // 1. 先停止订单分配通知轮询
       try {
@@ -545,7 +545,7 @@ export default {
       
       // 2. 通知子组件停止轮询（优先级最高）
       if (workRecordsRef.value && workRecordsRef.value.stopPollingData) {
-        console.log('📢 通知 EmployeeWorkRecords 组件停止轮询')
+        // console.log('📢 通知 EmployeeWorkRecords 组件停止轮询')
         try {
           workRecordsRef.value.stopPollingData()
         } catch (e) {
@@ -555,36 +555,36 @@ export default {
       
       // 3. 获取当前活跃轮询
       const activePolling = getActivePollingKeys()
-      console.log('📊 Employee 活跃轮询列表:', activePolling)
+      // console.log('📊 Employee 活跃轮询列表:', activePolling)
       
       // 4. 强制清除所有轮询（使用最强力的方法）
-      console.log('🧹 强制清除所有轮询（暴力模式）')
+      // console.log('🧹 强制清除所有轮询（暴力模式）')
       forceStopAllPolling()
       
       // 5. 延迟检查并再次强制清理（双重保险）
       setTimeout(() => {
         const stillActive = getActivePollingKeys()
         if (stillActive.length > 0) {
-          console.log('🚨 发现残留轮询，再次强制清理:', stillActive)
+          // console.log('🚨 发现残留轮询，再次强制清理:', stillActive)
           forceStopAllPolling()
         } else {
-          console.log('✅ 确认所有轮询已停止')
+          // console.log('✅ 确认所有轮询已停止')
         }
       }, 100)
       
-      console.log('✅ Employee 轮询停止完成')
+      // console.log('✅ Employee 轮询停止完成')
     }
     
     // 路由离开守卫 - 确保离开页面时停止轮询
     onBeforeRouteLeave((to, from, next) => {
-      console.log('Employee onBeforeRouteLeave, 停止所有轮询')
+      // console.log('Employee onBeforeRouteLeave, 停止所有轮询')
       stopAllPolling()
       next()
     })
     
     // 组件卸载时确保停止所有轮询
     onUnmounted(() => {
-      console.log('Employee onUnmounted, 确保停止所有轮询')
+      // console.log('Employee onUnmounted, 确保停止所有轮询')
       stopAllPolling()
     })
     
@@ -592,6 +592,46 @@ export default {
     // 工单分配弹窗事件处理
     const handleOrderAssignmentMarkAsRead = async (notificationIds, stackId = null) => {
       try {
+        // 调用API标记通知为已读
+        if (notificationIds && notificationIds.length > 0) {
+          const token = localStorage.getItem('token')
+          const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+          const userId = userInfo.id
+          
+          // 如果只有一个通知，使用单个标记接口
+          if (notificationIds.length === 1) {
+            const response = await fetch(`/api/api/notifications/${notificationIds[0]}/read`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'X-User-Id': userId?.toString() || ''
+              }
+            })
+            
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`)
+            }
+          } else {
+            // 多个通知使用批量标记接口
+            const response = await fetch('/api/api/notifications/batch-read', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'X-User-Id': userId?.toString() || ''
+              },
+              body: JSON.stringify(notificationIds)
+            })
+            
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`)
+            }
+          }
+          
+          // console.log(`已成功标记 ${notificationIds.length} 条工单分配通知为已读`)
+        }
+        
         // 从叠加栈中移除该弹窗
         if (stackId) {
           popupStacks.value = popupStacks.value.filter(p => p.id !== stackId)
@@ -600,9 +640,15 @@ export default {
           orderAssignmentPopupVisible.value = false
         }
         
-        console.log(`已处理 ${notificationIds.length} 条工单分配通知`)
+        // 更新本地未读数量
+        if (notificationIds && notificationIds.length > 0) {
+          decreaseUnreadCount(notificationIds.length)
+        }
+        
+        // console.log(`已处理 ${notificationIds.length} 条工单分配通知`)
       } catch (error) {
         console.error('处理工单分配通知失败:', error)
+        ElMessage.error('标记已读失败，请稍后重试')
       }
     }
     
@@ -613,7 +659,7 @@ export default {
       if (stackId) {
         popupStacks.value = popupStacks.value.filter(p => p.id !== stackId)
       }
-      console.log('跳转到工作记录页面')
+      // console.log('跳转到工作记录页面')
     }
     
     return {

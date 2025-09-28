@@ -493,11 +493,11 @@ export default {
     
     // 筛选后的员工列表
     const filteredEmployees = computed(() => {
-      console.log('filteredEmployees computed 被调用，employees.value:', employees.value)
+      // console.log('filteredEmployees computed 被调用，employees.value:', employees.value)
       const filtered = !statusFilter.value 
         ? employees.value 
         : employees.value.filter(emp => emp.workStatus === statusFilter.value)
-      console.log('筛选后的员工列表:', filtered, '筛选条件:', statusFilter.value)
+      // console.log('筛选后的员工列表:', filtered, '筛选条件:', statusFilter.value)
       return filtered
     })
     
@@ -567,7 +567,7 @@ export default {
           const timeSinceLogout = Date.now() - lastLogoutTime
           
           if (isLogoutInProgress || timeSinceLogout < 100) {
-            console.log('🚪 正在登出或刚刚登出，跳过用户信息获取')
+            // console.log('🚪 正在登出或刚刚登出，跳过用户信息获取')
             return
           }
           
@@ -584,13 +584,13 @@ export default {
     }
 
     const refreshEmployeeList = async () => {
-      console.log('开始刷新员工列表...')
+      // console.log('开始刷新员工列表...')
       const result = await customerServiceStore.actions.fetchEmployees()
-      console.log('刷新员工列表结果:', result)
+      // console.log('刷新员工列表结果:', result)
       if (!result.success) {
         ElMessage.error(result.message)
       } else {
-        console.log('员工列表刷新成功，员工数量:', result.data?.length || 0)
+        // console.log('员工列表刷新成功，员工数量:', result.data?.length || 0)
       }
     }
     
@@ -805,12 +805,12 @@ export default {
         // 更新未读数量
         try {
           await fetchUnreadCount()
-          console.log('弹窗标记已读后已更新未读数量')
+          // console.log('弹窗标记已读后已更新未读数量')
         } catch (error) {
           console.error('更新未读数量失败:', error)
         }
         
-        console.log(`已处理 ${notificationIds.length} 条员工状态通知`)
+        // console.log(`已处理 ${notificationIds.length} 条员工状态通知`)
       } catch (error) {
         console.error('处理员工状态通知失败:', error)
         ElMessage.error('标记已读失败')
@@ -824,7 +824,7 @@ export default {
       if (stackId) {
         statusPopupStacks.value = statusPopupStacks.value.filter(p => p.id !== stackId)
       }
-      console.log('跳转到员工列表页面')
+      // console.log('跳转到员工列表页面')
     }
     
     
@@ -838,13 +838,13 @@ export default {
         'cs-employees',
         // 数据获取函数 - 只获取员工状态信息，不获取工单数据
         async () => {
-          console.log('轮询获取员工状态数据...')
+          // console.log('轮询获取员工状态数据...')
           
           // 直接使用 /api/cs/employees 接口获取员工状态
           const response = await customerServiceAPI.getEmployees()
           
           if (response.code === 200 && Array.isArray(response.data)) {
-            console.log('轮询获取到的员工状态数据:', response.data)
+            // console.log('轮询获取到的员工状态数据:', response.data)
             return response.data
           } else {
             console.warn('员工状态接口返回异常:', response)
@@ -853,9 +853,9 @@ export default {
         },
         // 数据变化时的回调 - 只有在检测到变化时才更新store
         (newData, oldData, changes) => {
-          console.log('检测到员工状态数据变化，更新UI')
+          // console.log('检测到员工状态数据变化，更新UI')
           if (changes && changes.length > 0) {
-            console.log('员工状态变化详情:', changes)
+            // console.log('员工状态变化详情:', changes)
             // 只在有实际变化时显示通知，避免过多提示
             if (changes.length <= 3) {
               ElMessage.info(`员工状态已更新`)
@@ -864,20 +864,20 @@ export default {
           
           // 直接调用store方法更新员工状态数据
           if (Array.isArray(newData)) {
-            console.log('轮询获取到的新状态数据:', newData)
+            // console.log('轮询获取到的新状态数据:', newData)
             customerServiceStore.actions.updateEmployeeStatusFromPolling(newData)
           }
         },
         interval
       )
       
-      console.log(`开始智能轮询员工状态，间隔: ${POLLING_CONFIG.CS_EMPLOYEES}秒`)
+      // console.log(`开始智能轮询员工状态，间隔: ${POLLING_CONFIG.CS_EMPLOYEES}秒`)
     }
     
     // 停止轮询员工列表
     const stopPollingEmployees = () => {
       stopPolling('cs-employees')
-      console.log('停止轮询员工列表')
+      // console.log('停止轮询员工列表')
     }
     
     // 开始员工状态通知轮询
@@ -886,7 +886,7 @@ export default {
       const pollingKey = `employee-status-notifications-${currentUser?.id || 'cs'}`
       const interval = POLLING_CONFIG.EMPLOYEE_ORDERS * 1000 // 使用与工单相同的轮询间隔
       
-      console.log(`开始员工状态通知轮询，间隔: ${POLLING_CONFIG.EMPLOYEE_ORDERS}秒`)
+      // console.log(`开始员工状态通知轮询，间隔: ${POLLING_CONFIG.EMPLOYEE_ORDERS}秒`)
       
       // 数据获取函数
       const dataFetcher = async () => {
@@ -895,12 +895,12 @@ export default {
         const isLogoutInProgress = authStore.state.isLogoutInProgress
         
         if (!isAuthenticated || isLogoutInProgress) {
-          console.log('🚫 用户已登出或登出进行中，停止员工状态通知轮询')
+          // console.log('🚫 用户已登出或登出进行中，停止员工状态通知轮询')
           stopEmployeeStatusNotificationPolling()
           throw new Error('用户已登出，停止轮询')
         }
         
-        console.log('轮询获取员工状态通知数据...')
+        // console.log('轮询获取员工状态通知数据...')
         
         try {
           // 调用员工状态通知接口
@@ -916,7 +916,7 @@ export default {
             const result = await response.json()
             return result.data || []
           } else if (response.status === 401) {
-            console.log('认证失效，停止员工状态通知轮询')
+            // console.log('认证失效，停止员工状态通知轮询')
             authStore.actions.logout()
             throw new Error('认证失效')
           } else {
@@ -931,7 +931,7 @@ export default {
       
       // 数据变化处理函数
       const onNotificationChange = (newData, oldData, changes) => {
-        console.log('检测到员工状态通知数据变化:', changes)
+        // console.log('检测到员工状态通知数据变化:', changes)
         
         // 更新本地通知数据
         if (newData && Array.isArray(newData)) {
@@ -943,7 +943,7 @@ export default {
           updateEmployeeStatusNotifications(newData)
           
           if (newNotifications.length > 0) {
-            console.log(`发现 ${newNotifications.length} 条新的员工状态通知`)
+            // console.log(`发现 ${newNotifications.length} 条新的员工状态通知`)
             
             // 为每批未读通知创建一个叠加弹窗栈条目
             statusPopupStacks.value.push({
@@ -951,7 +951,7 @@ export default {
               notifications: newNotifications,
               visible: true
             })
-            console.log(`显示员工状态通知弹窗(叠加)，本批 ${newNotifications.length} 条`)
+            // console.log(`显示员工状态通知弹窗(叠加)，本批 ${newNotifications.length} 条`)
           }
         }
       }
@@ -964,11 +964,11 @@ export default {
     const stopEmployeeStatusNotificationPolling = () => {
       const currentUser = authStore.getters.currentUser.value
       const pollingKey = `employee-status-notifications-${currentUser?.id || 'cs'}`
-      console.log('🛑 停止员工状态通知轮询')
+      // console.log('🛑 停止员工状态通知轮询')
       
       try {
         stopPolling(pollingKey)
-        console.log('✅ 员工状态通知轮询已停止:', pollingKey)
+        // console.log('✅ 员工状态通知轮询已停止:', pollingKey)
       } catch (e) {
         console.warn('⚠️ 停止员工状态通知轮询失败:', e)
       }
@@ -980,7 +980,7 @@ export default {
       const pollingKey = `unread-count-${currentUser?.id || 'cs'}`
       const interval = POLLING_CONFIG.CS_EMPLOYEES * 1000 // 使用相同的轮询间隔
       
-      console.log(`开始未读数量轮询，间隔: ${POLLING_CONFIG.CS_EMPLOYEES}秒`)
+      // console.log(`开始未读数量轮询，间隔: ${POLLING_CONFIG.CS_EMPLOYEES}秒`)
       
       // 数据获取函数
       const dataFetcher = async () => {
@@ -989,12 +989,12 @@ export default {
         const isLogoutInProgress = authStore.state.isLogoutInProgress
         
         if (!isAuthenticated || isLogoutInProgress) {
-          console.log('🚫 用户已登出或登出进行中，停止未读数量轮询')
+          // console.log('🚫 用户已登出或登出进行中，停止未读数量轮询')
           stopUnreadCountPolling()
           throw new Error('用户已登出，停止轮询')
         }
         
-        console.log('轮询获取未读数量...')
+        // console.log('轮询获取未读数量...')
         
         try {
           // 调用未读数量接口
@@ -1010,7 +1010,7 @@ export default {
             const result = await response.json()
             return result.data || 0
           } else if (response.status === 401) {
-            console.log('认证失效，停止未读数量轮询')
+            // console.log('认证失效，停止未读数量轮询')
             authStore.actions.logout()
             throw new Error('认证失效')
           } else {
@@ -1025,11 +1025,11 @@ export default {
       
       // 数据变化处理函数
       const onUnreadCountChange = (newCount, oldCount, changes) => {
-        console.log('检测到未读数量变化:', { oldCount, newCount })
+        // console.log('检测到未读数量变化:', { oldCount, newCount })
         
         if (typeof newCount === 'number' && newCount !== oldCount) {
           updateUnreadCount(newCount)
-          console.log(`未读数量已更新: ${newCount}`)
+          // console.log(`未读数量已更新: ${newCount}`)
         }
       }
       
@@ -1041,11 +1041,11 @@ export default {
     const stopUnreadCountPolling = () => {
       const currentUser = authStore.getters.currentUser.value
       const pollingKey = `unread-count-${currentUser?.id || 'cs'}`
-      console.log('🛑 停止未读数量轮询')
+      // console.log('🛑 停止未读数量轮询')
       
       try {
         stopPolling(pollingKey)
-        console.log('✅ 未读数量轮询已停止:', pollingKey)
+        // console.log('✅ 未读数量轮询已停止:', pollingKey)
       } catch (e) {
         console.warn('⚠️ 停止未读数量轮询失败:', e)
       }
@@ -1067,12 +1067,12 @@ export default {
     
     // 页面激活时刷新未读数量（从其他页面返回时）
     onActivated(async () => {
-      console.log('客服页面激活，刷新未读数量')
+      // console.log('客服页面激活，刷新未读数量')
       // 稍微延迟执行，确保前一个页面的更新已完成
       setTimeout(async () => {
         try {
           await fetchUnreadCount()
-          console.log('页面激活时已刷新未读数量:', unreadCount.value)
+          // console.log('页面激活时已刷新未读数量:', unreadCount.value)
         } catch (error) {
           console.error('页面激活时刷新未读数量失败:', error)
         }

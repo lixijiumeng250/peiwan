@@ -31,15 +31,15 @@ export const createUser = async (userData) => {
       deleted: userData.deleted !== undefined ? userData.deleted : 0 // 默认为0（未删除）
     }
     
-    console.log('Admin API - 发送创建客服用户请求:', {
-      url: '/api/admin/users',
-      method: 'POST',
-      payload: userPayload
-    })
+    // console.log('Admin API - 发送创建客服用户请求:', {
+    //   url: '/api/admin/users',
+    //   method: 'POST',
+    //   payload: userPayload
+    // })
     
     const response = await http.post('/admin/users', userPayload)
     
-    console.log('Admin API - 创建客服用户响应:', response)
+    // console.log('Admin API - 创建客服用户响应:', response)
     
     // 验证响应格式是否符合API文档
     if (response && typeof response.code === 'number') {

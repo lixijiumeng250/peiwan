@@ -394,7 +394,7 @@ export default {
       if (!Array.isArray(oldNotifications) || oldNotifications.length === 0) {
         const unreadNotifications = newNotifications.filter(n => !n.isRead)
         if (unreadNotifications.length > 0) {
-          console.log(`员工详情页初始加载发现 ${unreadNotifications.length} 条未读员工状态通知`)
+          // console.log(`员工详情页初始加载发现 ${unreadNotifications.length} 条未读员工状态通知`)
           
           // 为初始未读通知创建弹窗栈条目
           statusPopupStacks.value.push({
@@ -402,7 +402,7 @@ export default {
             notifications: unreadNotifications,
             visible: true
           })
-          console.log(`显示初始员工状态通知弹窗，共 ${unreadNotifications.length} 条`)
+          // console.log(`显示初始员工状态通知弹窗，共 ${unreadNotifications.length} 条`)
         }
         return
       }
@@ -414,7 +414,7 @@ export default {
       )
       
       if (newUnreadNotifications.length > 0) {
-        console.log(`员工详情页发现 ${newUnreadNotifications.length} 条新的员工状态通知`)
+        // console.log(`员工详情页发现 ${newUnreadNotifications.length} 条新的员工状态通知`)
         
         // 为每批未读通知创建一个叠加弹窗栈条目
         statusPopupStacks.value.push({
@@ -422,7 +422,7 @@ export default {
           notifications: newUnreadNotifications,
           visible: true
         })
-        console.log(`显示员工状态通知弹窗(叠加)，本批 ${newUnreadNotifications.length} 条`)
+        // console.log(`显示员工状态通知弹窗(叠加)，本批 ${newUnreadNotifications.length} 条`)
       }
     }, { deep: true, immediate: true })
     
@@ -525,13 +525,13 @@ export default {
     
     const goBack = async () => {
       // 返回前确保停止轮询
-      console.log('goBack: 停止轮询')
+      // console.log('goBack: 停止轮询')
       stopPollingEmployeeInfo()
       
       // 在返回前更新未读数量，确保返回页面时数据是最新的
       try {
         await fetchUnreadCount()
-        console.log('返回前已更新未读数量')
+        // console.log('返回前已更新未读数量')
       } catch (error) {
         console.error('返回前更新未读数量失败:', error)
       }
@@ -569,10 +569,10 @@ export default {
             rating: currentEmployee.rating || 0,
             avatar: currentEmployee.avatar
           }
-          console.log('从store获取员工信息:', employeeInfo.value)
+          // console.log('从store获取员工信息:', employeeInfo.value)
         } else if (role === 'ADMIN') {
           // 管理员角色：直接使用路由参数中的employeeId作为userId来设置X-User-ID
-          console.log('管理员模式：使用employeeId作为userId:', employeeId.value)
+          // console.log('管理员模式：使用employeeId作为userId:', employeeId.value)
           
           // 首先尝试从store中获取员工基本信息
           if (currentEmployee && currentEmployee.id === employeeId.value) {
@@ -589,7 +589,7 @@ export default {
               rating: currentEmployee.rating || 0,
               avatar: currentEmployee.avatar || ''
             }
-            console.log('管理员模式：从store获取员工信息，设置userId为employeeId:', employeeInfo.value)
+            // console.log('管理员模式：从store获取员工信息，设置userId为employeeId:', employeeInfo.value)
           } else {
             // 如果store中没有信息，创建基本结构
             employeeInfo.value = {
@@ -605,7 +605,7 @@ export default {
               rating: 0,
               avatar: ''
             }
-            console.log('管理员模式：创建基本员工信息结构，设置userId为employeeId:', employeeInfo.value)
+            // console.log('管理员模式：创建基本员工信息结构，设置userId为employeeId:', employeeInfo.value)
           }
         } else {
           // 客服角色：使用原有逻辑调用客服API
@@ -630,7 +630,7 @@ export default {
                 rating: employee.rating || 0,
                 avatar: employee.avatar
               }
-              console.log('客服模式：从员工列表获取员工信息:', employeeInfo.value)
+              // console.log('客服模式：从员工列表获取员工信息:', employeeInfo.value)
             } else {
               ElMessage.error('员工不存在')
               goBack()
@@ -657,21 +657,21 @@ export default {
         skillsLoading.value = true
         
         if (!employeeInfo.value?.userId) {
-          console.log('员工userId不存在，无法获取游戏技能')
+          // console.log('员工userId不存在，无法获取游戏技能')
           gameSkills.value = []
           return
         }
         
         // 使用客服专用接口，设置X-User-Id为员工的userId（来自/api/cs/employees接口）
-        console.log('准备获取游戏技能，员工userId:', employeeInfo.value.userId)
+        // console.log('准备获取游戏技能，员工userId:', employeeInfo.value.userId)
         const response = await getEmployeeGameSkillsForCS(employeeInfo.value.userId)
         
         if (response.code === 200 && response.data) {
           gameSkills.value = response.data
-          console.log('成功获取员工游戏技能:', response.data)
+          // console.log('成功获取员工游戏技能:', response.data)
         } else {
           gameSkills.value = []
-          console.log('获取游戏技能响应为空或失败:', response)
+          // console.log('获取游戏技能响应为空或失败:', response)
         }
       } catch (error) {
         console.error('加载游戏技能失败:', error)
@@ -686,7 +686,7 @@ export default {
     const loadEmployeeProfile = async () => {
       try {
         if (!employeeInfo.value?.userId) {
-          console.log('员工userId不存在，无法获取个人资料')
+          // console.log('员工userId不存在，无法获取个人资料')
           return null
         }
         const resp = await getProfileForUser(employeeInfo.value.userId)
@@ -727,7 +727,7 @@ export default {
       // 检查用户角色，管理员不调用客服API
       const role = userRole.value?.toUpperCase()
       if (role === 'ADMIN') {
-        console.log('管理员角色，跳过工作记录刷新')
+        // console.log('管理员角色，跳过工作记录刷新')
         return
       }
       
@@ -925,7 +925,7 @@ export default {
       
       // 数据获取函数
       const dataFetcher = async () => {
-        console.log('轮询获取员工个人资料...')
+        // console.log('轮询获取员工个人资料...')
         try {
           const targetUserId = employeeInfo.value?.userId
           if (!targetUserId) return employeeInfo.value
@@ -941,7 +941,7 @@ export default {
       
       // 数据变化处理函数
       const onEmployeeInfoChange = (newData, oldData, changes) => {
-        console.log('检测到员工个人资料变化，更新UI')
+        // console.log('检测到员工个人资料变化，更新UI')
         // 合并变更到显示信息
         const merged = {
           ...employeeInfo.value,
@@ -964,15 +964,15 @@ export default {
       // 开始智能轮询
       startSmartPolling(pollingKey, dataFetcher, onEmployeeInfoChange, interval)
       
-      console.log(`开始轮询员工详情信息，间隔: ${POLLING_CONFIG.CS_EMPLOYEES}秒`)
+      // console.log(`开始轮询员工详情信息，间隔: ${POLLING_CONFIG.CS_EMPLOYEES}秒`)
     }
     
     // 停止轮询员工信息
     const stopPollingEmployeeInfo = () => {
       const pollingKey = `employee-detail-${employeeId.value}`
-      console.log(`正在停止轮询: ${pollingKey}`)
+      // console.log(`正在停止轮询: ${pollingKey}`)
       stopPolling(pollingKey)
-      console.log(`轮询已停止: ${pollingKey}`)
+      // console.log(`轮询已停止: ${pollingKey}`)
       
       // 额外保险：检查并清除所有可能的轮询键
       const possibleKeys = [
@@ -983,7 +983,7 @@ export default {
       
       possibleKeys.forEach(key => {
         if (key && key !== pollingKey) {
-          console.log(`检查并停止可能的轮询键: ${key}`)
+          // console.log(`检查并停止可能的轮询键: ${key}`)
           stopPolling(key)
         }
       })
@@ -992,7 +992,7 @@ export default {
     
     // 监听路由参数变化
     watch(() => route.params.id, async (newId, oldId) => {
-      console.log(`员工详情页面ID变化: ${oldId} -> ${newId}`)
+      // console.log(`员工详情页面ID变化: ${oldId} -> ${newId}`)
       if (newId !== oldId && newId) {
         // 停止旧的轮询
         stopPollingEmployeeInfo()
@@ -1010,7 +1010,7 @@ export default {
 
     // 生命周期
     onMounted(async () => {
-      console.log('CSEmployeeDetail onMounted, employeeId:', employeeId.value)
+      // console.log('CSEmployeeDetail onMounted, employeeId:', employeeId.value)
       await nextTick()
       setTimeout(async () => {
         await loadEmployeeInfo()
@@ -1020,7 +1020,7 @@ export default {
         // 获取未读通知数量
         try {
           await fetchUnreadCount()
-          console.log('员工详情页面已获取未读数量')
+          // console.log('员工详情页面已获取未读数量')
         } catch (error) {
           console.error('获取未读数量失败:', error)
         }
@@ -1034,7 +1034,7 @@ export default {
 
     // 组件激活时刷新数据（用于keep-alive场景）
     onActivated(async () => {
-      console.log('CSEmployeeDetail onActivated, employeeId:', employeeId.value)
+      // console.log('CSEmployeeDetail onActivated, employeeId:', employeeId.value)
       await nextTick()
       await loadEmployeeInfo()
       await loadEmployeeProfile()
@@ -1043,7 +1043,7 @@ export default {
       // 获取未读通知数量
       try {
         await fetchUnreadCount()
-        console.log('员工详情页面激活时已获取未读数量')
+        // console.log('员工详情页面激活时已获取未读数量')
       } catch (error) {
         console.error('员工详情页面激活时获取未读数量失败:', error)
       }
@@ -1054,26 +1054,26 @@ export default {
     
     // 组件卸载时停止轮询
     onUnmounted(() => {
-      console.log('CSEmployeeDetail onUnmounted, 停止轮询')
+      // console.log('CSEmployeeDetail onUnmounted, 停止轮询')
       stopPollingEmployeeInfo()
     })
     
     // 组件停用（离开路由但未销毁）时停止轮询，避免返回总览时继续请求
     onDeactivated(() => {
-      console.log('CSEmployeeDetail onDeactivated, 停止轮询')
+      // console.log('CSEmployeeDetail onDeactivated, 停止轮询')
       stopPollingEmployeeInfo()
     })
     
     // 路由离开前停止轮询（确保在任何路由切换时都停止）
     onBeforeRouteLeave((to, from, next) => {
-      console.log('CSEmployeeDetail beforeRouteLeave, 停止轮询')
+      // console.log('CSEmployeeDetail beforeRouteLeave, 停止轮询')
       stopPollingEmployeeInfo()
       next()
     })
     
     // 组件销毁前停止轮询（额外保险）
     onBeforeUnmount(() => {
-      console.log('CSEmployeeDetail onBeforeUnmount, 停止轮询')
+      // console.log('CSEmployeeDetail onBeforeUnmount, 停止轮询')
       stopPollingEmployeeInfo()
     })
     
@@ -1094,12 +1094,12 @@ export default {
         // 重新获取未读数量以确保数据同步
         try {
           await fetchUnreadCount()
-          console.log('标记已读后已更新未读数量')
+          // console.log('标记已读后已更新未读数量')
         } catch (error) {
           console.error('更新未读数量失败:', error)
         }
         
-        console.log(`已处理 ${notificationIds.length} 条员工状态通知`)
+        // console.log(`已处理 ${notificationIds.length} 条员工状态通知`)
       } catch (error) {
         console.error('处理员工状态通知失败:', error)
         ElMessage.error('标记已读失败')
@@ -1115,7 +1115,7 @@ export default {
       // 在跳转前更新未读数量，确保返回客服页面时数据是最新的
       try {
         await fetchUnreadCount()
-        console.log('返回客服页面前已更新未读数量')
+        // console.log('返回客服页面前已更新未读数量')
       } catch (error) {
         console.error('返回客服页面前更新未读数量失败:', error)
       }

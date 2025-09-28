@@ -11,10 +11,10 @@ import http from './http'
  */
 export const login = async (loginData) => {
   try {
-    console.log('🔐 调用登录API - 时间戳:', new Date().toISOString())
-    console.log('🔐 登录数据:', { username: loginData.username, rememberMe: loginData.rememberMe })
+    // console.log('🔐 调用登录API - 时间戳:', new Date().toISOString())
+    // console.log('🔐 登录数据:', { username: loginData.username, rememberMe: loginData.rememberMe })
     console.trace('🔐 登录API调用堆栈:')
-    console.log('🔐 HTTP方法: POST, URL: /auth/login')
+    // console.log('🔐 HTTP方法: POST, URL: /auth/login')
     
     const response = await http.post('/auth/login', {
       username: loginData.username,
@@ -103,12 +103,12 @@ export const register = async (registerData) => {
  */
 export const logout = async () => {
   try {
-    console.log('🚪 调用登出API - 时间戳:', new Date().toISOString())
+    // console.log('🚪 调用登出API - 时间戳:', new Date().toISOString())
     console.trace('🚪 登出API调用堆栈:')
-    console.log('🚪 HTTP方法: POST, URL: /auth/logout')
+    // console.log('🚪 HTTP方法: POST, URL: /auth/logout')
     
     const response = await http.post('/auth/logout')
-    console.log('🚪 登出API响应:', response)
+    // console.log('🚪 登出API响应:', response)
     // 预期的后端响应格式
     // {
     //   code: 0,
@@ -226,20 +226,20 @@ export const changePassword = async (changePasswordData) => {
       confirmPassword: changePasswordData.confirmPassword
     }
     
-    console.log('Auth API - 发送修改密码请求:', {
-      url: '/api/auth/change-password',
-      method: 'POST',
-      payload: { ...requestPayload, currentPassword: '***', newPassword: '***', confirmPassword: '***' }
-    })
+    // console.log('Auth API - 发送修改密码请求:', {
+    //   url: '/api/auth/change-password',
+    //   method: 'POST',
+    //   payload: { ...requestPayload, currentPassword: '***', newPassword: '***', confirmPassword: '***' }
+    // })
     
     const response = await http.post('/auth/change-password', requestPayload)
     
-    console.log('Auth API - 修改密码响应:', {
-      code: response.code,
-      message: response.message,
-      timestamp: response.timestamp,
-      requestId: response.requestId
-    })
+    // console.log('Auth API - 修改密码响应:', {
+    //   code: response.code,
+    //   message: response.message,
+    //   timestamp: response.timestamp,
+    //   requestId: response.requestId
+    // })
     
     // 验证响应格式是否符合API文档
     if (response && typeof response.code === 'number') {

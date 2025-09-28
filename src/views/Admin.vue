@@ -1089,17 +1089,17 @@ export default {
     
     // 使用admin store的数据
     const users = computed(() => {
-      console.log('Admin页面 - 用户数据更新:', adminStore.state.users)
+      // console.log('Admin页面 - 用户数据更新:', adminStore.state.users)
       return adminStore.state.users
     })
     const employees = computed(() => {
       const emp = users.value.filter(user => user.role === 'EMPLOYEE')
-      console.log('Admin页面 - 员工数据:', emp)
+      // console.log('Admin页面 - 员工数据:', emp)
       return emp
     })
     const customerServices = computed(() => {
       const cs = users.value.filter(user => user.role === 'CS')
-      console.log('Admin页面 - 客服数据:', cs)
+      // console.log('Admin页面 - 客服数据:', cs)
       return cs
     })
     
@@ -1659,7 +1659,7 @@ export default {
           deleted: 0 // 默认为0（未删除）
         }
         
-        console.log('提交创建客服用户请求:', userData)
+        // console.log('提交创建客服用户请求:', userData)
         const result = await adminStore.actions.createUser(userData)
         
         if (result.success) {
@@ -1676,7 +1676,7 @@ export default {
           
           // 记录请求ID（如果有）
           if (result.requestId) {
-            console.log('创建客服用户请求ID:', result.requestId)
+            // console.log('创建客服用户请求ID:', result.requestId)
           }
         } else {
           ElMessage.error(result.message || '录入客服失败')
@@ -1696,14 +1696,14 @@ export default {
     const fetchManagedEmployees = async (csUserId) => {
       isLoadingManagedEmployees.value = true
       try {
-        console.log('获取客服管理的员工列表，客服ID:', csUserId)
+        // console.log('获取客服管理的员工列表，客服ID:', csUserId)
         const response = await getCsEmployeeMappings()
-        console.log('客服员工关系响应:', response)
+        // console.log('客服员工关系响应:', response)
         
         if (response.code === 200 && response.data) {
           // 过滤出指定客服管理的员工
           const csEmployeeRelations = response.data.filter(mapping => mapping.csUserId === csUserId)
-          console.log('该客服管理的关系:', csEmployeeRelations)
+          // console.log('该客服管理的关系:', csEmployeeRelations)
           
           // 从用户列表中获取员工详细信息
           const employeeDetails = csEmployeeRelations.map(relation => {
@@ -1726,7 +1726,7 @@ export default {
           }).filter(Boolean)
           
           managedEmployees.value = employeeDetails
-          console.log('管理的员工详细信息:', employeeDetails)
+          // console.log('管理的员工详细信息:', employeeDetails)
         } else {
           console.error('获取客服员工关系失败:', response.message)
           managedEmployees.value = []
@@ -2061,13 +2061,13 @@ export default {
     const refreshMappings = async (showMessage = false) => {
       isLoadingMappings.value = true
       try {
-        console.log('开始刷新客服员工关系列表')
+        // console.log('开始刷新客服员工关系列表')
         const response = await getCsEmployeeMappings()
-        console.log('刷新关系列表响应:', response)
+        // console.log('刷新关系列表响应:', response)
         
         if (response.code === 200 && response.data) {
           csEmployeeMappings.value = response.data
-          console.log('关系列表数据:', response.data)
+          // console.log('关系列表数据:', response.data)
           if (showMessage) {
             ElMessage.success('关系列表已刷新')
           }
@@ -2085,7 +2085,7 @@ export default {
           if (config.errorHandling?.showNetworkErrors) {
             ElMessage.error('网络错误，请检查连接')
           } else {
-            console.log('网络错误已被配置隐藏: 网络请求失败')
+            // console.log('网络错误已被配置隐藏: 网络请求失败')
           }
         }
       } finally {
@@ -2122,7 +2122,7 @@ export default {
           }))
 
         cardEmployees.value = employeeList
-        console.log('管理员页面 - 员工卡片数据已更新:', employeeList.length, '条记录')
+        // console.log('管理员页面 - 员工卡片数据已更新:', employeeList.length, '条记录')
       } catch (error) {
         console.error('刷新员工卡片数据失败:', error)
       } finally {
@@ -2164,9 +2164,9 @@ export default {
           return
         }
         
-        console.log('创建关系请求数据:', mappingFormData)
+        // console.log('创建关系请求数据:', mappingFormData)
         const response = await createCsEmployeeMapping(mappingFormData)
-        console.log('创建关系响应:', response)
+        // console.log('创建关系响应:', response)
         
         if (response.code === 200) {
           addMappingVisible.value = false
@@ -2192,7 +2192,7 @@ export default {
           if (config.errorHandling?.showNetworkErrors) {
             ElMessage.error('网络错误，请检查连接')
           } else {
-            console.log('网络错误已被配置隐藏: 网络请求失败')
+            // console.log('网络错误已被配置隐藏: 网络请求失败')
           }
         }
       } finally {
@@ -2799,9 +2799,9 @@ export default {
         },
         // 数据变化时的回调
         (newData, oldData) => {
-          console.log('管理员页面员工卡片数据发生变化，更新UI')
-          console.log('新数据:', newData?.length || 0, '条记录')
-          console.log('旧数据:', oldData?.length || 0, '条记录')
+          // console.log('管理员页面员工卡片数据发生变化，更新UI')
+          // console.log('新数据:', newData?.length || 0, '条记录')
+          // console.log('旧数据:', oldData?.length || 0, '条记录')
           
           // 更新员工卡片数据
           cardEmployees.value = newData || []
@@ -2809,13 +2809,13 @@ export default {
         interval
       )
       
-      console.log(`开始智能轮询管理员页面员工卡片，间隔: ${POLLING_CONFIG.ADMIN_USERS}秒`)
+      // console.log(`开始智能轮询管理员页面员工卡片，间隔: ${POLLING_CONFIG.ADMIN_USERS}秒`)
     }
 
     // 停止轮询员工卡片数据
     const stopPollingEmployeeCards = () => {
       stopPolling('admin-employee-cards')
-      console.log('停止轮询管理员页面员工卡片')
+      // console.log('停止轮询管理员页面员工卡片')
     }
 
     const initializeData = async () => {
@@ -2828,7 +2828,7 @@ export default {
           const timeSinceLogout = Date.now() - lastLogoutTime
           
           if (isLogoutInProgress || timeSinceLogout < 100) {
-            console.log('🚪 正在登出或刚刚登出，跳过用户信息获取')
+            // console.log('🚪 正在登出或刚刚登出，跳过用户信息获取')
             return
           }
           

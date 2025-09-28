@@ -357,7 +357,7 @@ async function markAsRead(notificationId) {
     // 调用API标记为已读
     await notificationManager.markAsRead(notificationId)
     
-    console.log(`开始淡出动画 - 通知ID: ${notificationId}`)
+    // console.log(`开始淡出动画 - 通知ID: ${notificationId}`)
     
     // 立即开始向右淡出动画
     notification.fadeOut = true
@@ -366,7 +366,7 @@ async function markAsRead(notificationId) {
     setTimeout(() => {
       const index = notificationList.value.findIndex(n => n.id === notificationId)
       if (index > -1) {
-        console.log(`从列表中移除通知: ${notificationId}`)
+        // console.log(`从列表中移除通知: ${notificationId}`)
         notificationList.value.splice(index, 1)
       }
     }, 600) // 给足够时间完成动画

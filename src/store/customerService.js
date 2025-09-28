@@ -51,7 +51,7 @@ const state = reactive({
 const getters = {
   // 员工列表
   employeeList: computed(() => {
-    console.log('employeeList getter 被调用，state.employees:', state.employees, '类型:', typeof state.employees, '是否数组:', Array.isArray(state.employees))
+    // console.log('employeeList getter 被调用，state.employees:', state.employees, '类型:', typeof state.employees, '是否数组:', Array.isArray(state.employees))
     return Array.isArray(state.employees) ? state.employees : []
   }),
   
@@ -128,12 +128,12 @@ const actions = {
         throw new Error('无法获取客服用户ID')
       }
       
-      console.log('获取客服员工关系，客服ID:', csUserId)
+      // console.log('获取客服员工关系，客服ID:', csUserId)
       
       // 使用客服员工关系API获取对应的员工
       const response = await csEmployeeMappingsAPI.getCsEmployeeMappings(csUserId)
       
-      console.log('客服员工关系API响应:', response, '响应类型:', typeof response)
+      // console.log('客服员工关系API响应:', response, '响应类型:', typeof response)
       
       // 兼容不同的API响应格式 - 处理客服员工关系数据
       let mappingsData = []
@@ -153,7 +153,7 @@ const actions = {
         mappingsData = []
       }
       
-      console.log('客服员工关系数据:', mappingsData)
+      // console.log('客服员工关系数据:', mappingsData)
       
       // 从关系数据中提取员工信息，并构建员工列表
       state.employees = mappingsData.map(mapping => ({
@@ -179,7 +179,7 @@ const actions = {
         updatedAt: mapping.updatedAt
       }))
       
-      console.log('处理后的员工数据:', state.employees, '数量:', state.employees.length, '类型:', typeof state.employees)
+      // console.log('处理后的员工数据:', state.employees, '数量:', state.employees.length, '类型:', typeof state.employees)
       
       // 获取员工的实时状态信息（只获取状态，不获取工单数据）
       await this.enrichEmployeeStatesFromCS()
@@ -203,11 +203,11 @@ const actions = {
   // 从CS API获取员工状态信息
   async enrichEmployeeStatesFromCS() {
     try {
-      console.log('开始从CS API获取员工状态信息...')
+      // console.log('开始从CS API获取员工状态信息...')
       
       // 调用 /cs/employees 获取员工状态（仅客服角色使用）
       const response = await customerServiceAPI.getEmployees()
-      console.log('CS员工API响应:', response)
+      // console.log('CS员工API响应:', response)
       
       let csEmployeesData = []
       if (response.code === 200 && response.data) {
@@ -220,12 +220,12 @@ const actions = {
         csEmployeesData = response.data
       }
       
-      console.log('CS员工状态数据:', csEmployeesData)
+      // console.log('CS员工状态数据:', csEmployeesData)
       
       // 检查第一个员工的性别字段
       if (csEmployeesData.length > 0) {
-        console.log('第一个CS员工的详细信息:', csEmployeesData[0])
-        console.log('第一个CS员工的性别字段:', csEmployeesData[0].gender)
+        // console.log('第一个CS员工的详细信息:', csEmployeesData[0])
+        // console.log('第一个CS员工的性别字段:', csEmployeesData[0].gender)
       }
       
       // 将CS API的员工状态信息合并到现有员工数据中
@@ -239,8 +239,8 @@ const actions = {
           )
           
           if (csEmployee) {
-            console.log(`匹配到员工 ${employee.name} 的状态信息:`, csEmployee)
-            console.log(`员工 ${employee.name} 的性别信息 - CS API: ${csEmployee.gender}, 当前: ${employee.gender}`)
+            // console.log(`匹配到员工 ${employee.name} 的状态信息:`, csEmployee)
+            // console.log(`员工 ${employee.name} 的性别信息 - CS API: ${csEmployee.gender}, 当前: ${employee.gender}`)
             
             // 更新员工信息
             state.employees[index] = {
@@ -256,14 +256,14 @@ const actions = {
               // 保存CS API返回的userId，用于游戏技能接口的X-User-Id请求头
               csEmployeeUserId: csEmployee.userId
             }
-            console.log(`更新后员工 ${employee.name} 的性别:`, state.employees[index].gender)
+            // console.log(`更新后员工 ${employee.name} 的性别:`, state.employees[index].gender)
           } else {
             console.warn(`未找到员工 ${employee.name} (ID: ${employee.id}) 的状态信息`)
           }
         })
       }
       
-      console.log('合并状态信息后的员工数据:', state.employees)
+      // console.log('合并状态信息后的员工数据:', state.employees)
     } catch (error) {
       console.warn('从CS API获取员工状态失败:', error)
     }
@@ -308,7 +308,7 @@ const actions = {
       })
       
       await Promise.allSettled(enrichPromises)
-      console.log('员工详细信息获取完成:', state.employees)
+      // console.log('员工详细信息获取完成:', state.employees)
     } catch (error) {
       console.warn('丰富员工详细信息失败:', error)
     }
@@ -321,7 +321,7 @@ const actions = {
 
   // 从轮询更新员工列表（避免不必要的副作用）
   updateEmployeeListFromPolling(employeeData) {
-    console.log('从轮询更新员工列表:', employeeData)
+    // console.log('从轮询更新员工列表:', employeeData)
     
     if (!Array.isArray(employeeData)) {
       console.warn('轮询数据不是数组，忽略更新')
@@ -341,12 +341,12 @@ const actions = {
       rating: emp.rating || 0
     }))
     
-    console.log('员工列表已从轮询更新，数量:', state.employees.length)
+    // console.log('员工列表已从轮询更新，数量:', state.employees.length)
   },
 
   // 从轮询更新员工状态（只更新状态相关字段，保持响应式）
   updateEmployeeStatusFromPolling(statusData) {
-    console.log('从轮询更新员工状态:', statusData)
+    // console.log('从轮询更新员工状态:', statusData)
     
     if (!Array.isArray(statusData)) {
       console.warn('状态数据不是数组，忽略更新')
@@ -362,7 +362,7 @@ const actions = {
       )
       
       if (newStatus) {
-        console.log(`更新员工 ${employee.name} 的状态: ${employee.workStatus} -> ${newStatus.workStatus || newStatus.status}`)
+        // console.log(`更新员工 ${employee.name} 的状态: ${employee.workStatus} -> ${newStatus.workStatus || newStatus.status}`)
         
         // 创建新的员工对象，保持其他字段不变
         return {
@@ -382,7 +382,7 @@ const actions = {
     // 替换整个数组以确保Vue响应式更新
     state.employees = updatedEmployees
     
-    console.log('员工状态已从轮询更新，更新后的员工列表:', state.employees)
+    // console.log('员工状态已从轮询更新，更新后的员工列表:', state.employees)
   },
 
   // 获取员工个人资料
@@ -524,7 +524,7 @@ const actions = {
     try {
       this.clearError()
       
-      console.log('发派工单接收到的数据:', orderData)
+      // console.log('发派工单接收到的数据:', orderData)
       
       // 检查字段是否存在
       const playStyleText = orderData.playStyle === 'TECHNICAL' ? '技术型' : 
@@ -539,7 +539,7 @@ const actions = {
         orderInfoScreenshotUrl: orderData.screenshot || null
       }
       
-      console.log('发送给API的数据:', apiData)
+      // console.log('发送给API的数据:', apiData)
       
       const response = await customerServiceAPI.createOrder(apiData)
       

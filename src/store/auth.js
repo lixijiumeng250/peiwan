@@ -22,8 +22,6 @@ const storage = {
       localStorage.setItem(REMEMBER_USER_KEY, JSON.stringify(user))
       localStorage.setItem(REMEMBER_LOGIN_KEY, 'true')
       localStorage.setItem(REMEMBER_EXPIRE_KEY, expireTime.toString())
-      console.log('✅ 已保存用户登录状态到本地存储（七天有效期）:', user.username)
-      console.log('✅ 过期时间:', new Date(expireTime).toLocaleString())
     } catch (error) {
       console.error('保存用户登录状态失败:', error)
     }
@@ -44,21 +42,16 @@ const storage = {
         const now = Date.now()
         
         if (now > expireTime) {
-          console.log('🕒 记住的登录状态已过期，自动清除')
-          console.log('🕒 过期时间:', new Date(expireTime).toLocaleString())
-          console.log('🕒 当前时间:', new Date(now).toLocaleString())
           storage.clearRememberedUser()
           return null
         }
         
         const remainingDays = Math.ceil((expireTime - now) / (24 * 60 * 60 * 1000))
-        console.log(`✅ 记住的登录状态还有 ${remainingDays} 天有效期`)
       }
       
       const userStr = localStorage.getItem(REMEMBER_USER_KEY)
       if (userStr) {
         const user = JSON.parse(userStr)
-        console.log('✅ 从本地存储获取到记住的用户:', user.username)
         return user
       }
     } catch (error) {
@@ -75,7 +68,6 @@ const storage = {
       localStorage.removeItem(REMEMBER_USER_KEY)
       localStorage.removeItem(REMEMBER_LOGIN_KEY)
       localStorage.removeItem(REMEMBER_EXPIRE_KEY)
-      console.log('✅ 已清除本地存储的用户登录状态')
     } catch (error) {
       console.error('清除用户登录状态失败:', error)
     }
@@ -146,12 +138,6 @@ const actions = {
     this.setUser(user)
     state.rememberLogin = rememberMe
     
-    console.log('🍪 Session认证状态已设置:', {
-      userId: user?.id,
-      username: user?.username,
-      role: user?.role,
-      rememberMe: rememberMe
-    })
     
     // 如果选择记住登录状态，保存到本地存储
     if (rememberMe && user) {
@@ -165,15 +151,65 @@ const actions = {
     // 前端只需要保存用户信息用于UI显示和业务逻辑
   },
   
+  // 检查是否有登录迹象（避免不必要的API调用）
+  hasLoginIndicators() {
+    try {
+      // 1. 检查是否有记住的用户信息（已在initAuth中处理，这里是双重保险）
+      const rememberedUser = storage.getRememberedUser()
+      if (rememberedUser) {
+        return true
+      }
+      
+      // 2. 检查是否有会话相关的Cookie（Session模式的主要指标）
+      const cookies = document.cookie
+      if (cookies.includes('JSESSIONID') || 
+          cookies.includes('SESSION') ||
+          cookies.includes('session') ||
+          cookies.includes('connect.sid') ||
+          cookies.includes('sessionid')) {
+        return true
+      }
+      
+      // 3. 检查是否刚刚完成登录（通过URL hash或state）
+      const hash = window.location.hash
+      const search = window.location.search
+      if (hash.includes('login-success') || search.includes('login-success')) {
+        return true
+      }
+      
+      // 4. 检查是否从登录相关页面跳转过来（限制时间窗口）
+      const referrer = document.referrer
+      if (referrer && (referrer.includes('/login') || referrer.includes('/register'))) {
+        // 只在最近5分钟内的跳转才认为有效
+        const sessionStartTime = sessionStorage.getItem('session_start_time')
+        const now = Date.now()
+        if (!sessionStartTime || (now - parseInt(sessionStartTime)) < 5 * 60 * 1000) {
+          return true
+        }
+      }
+      
+      // 5. 检查是否有其他认证相关的存储
+      if (localStorage.getItem('auth_timestamp') || 
+          sessionStorage.getItem('temp_auth') ||
+          sessionStorage.getItem('login_redirect')) {
+        return true
+      }
+      
+      return false
+    } catch (error) {
+      console.error('检查登录迹象时发生错误:', error)
+      // 发生错误时保守处理，返回false避免不必要的API调用
+      return false
+    }
+  },
+  
   // 初始化认证状态（Cookie 模式，支持记住登录状态）
   async initAuth() {
     try {
-      console.log('开始初始化认证状态（Cookie 模式）')
       
       // 首先检查本地存储是否有记住的用户信息
       const rememberedUser = storage.getRememberedUser()
       if (rememberedUser) {
-        console.log('发现记住的用户信息，尝试恢复登录状态:', rememberedUser.username)
         state.rememberLogin = true
         
         // 先设置用户信息到内存，然后验证后端会话
@@ -182,27 +218,22 @@ const actions = {
         // 验证后端会话是否仍然有效
         const success = await this.fetchCurrentUser()
         if (success) {
-          console.log('记住的登录状态验证成功:', {
-            user: state.user?.username,
-            role: state.user?.role
-          })
           return
         } else {
-          console.log('记住的登录状态已过期，清除本地存储')
           storage.clearRememberedUser()
           this.clearAuth()
         }
       }
       
-      // 如果没有记住的用户信息，直接询问后端当前会话
-      const success = await this.fetchCurrentUser()
-      if (success) {
-        console.log('认证状态初始化成功:', {
-          user: state.user?.username,
-          role: state.user?.role
-        })
+      // 如果没有记住的用户信息，检查是否有其他登录迹象
+      // 只有在有合理理由相信用户可能已登录时才检查会话状态
+      const hasLoginIndicators = this.hasLoginIndicators()
+      if (hasLoginIndicators) {
+        const success = await this.fetchCurrentUser()
+        if (success) {
+        } else {
+        }
       } else {
-        console.log('当前无有效会话')
       }
     } catch (error) {
       console.error('初始化认证状态失败:', error)
@@ -226,12 +257,9 @@ const actions = {
         // Session认证：后端设置Session Cookie，前端只需保存用户信息
         this.setAuthState(response.data.user, loginData.rememberMe)
         
-        console.log('🍪 登录成功，Session Cookie已设置:', {
-          userId: response.data.user.id,
-          username: response.data.user.username,
-          role: response.data.user.role,
-          rememberMe: loginData.rememberMe
-        })
+        
+        // 设置会话开始时间戳，用于后续的登录迹象检测
+        sessionStorage.setItem('session_start_time', Date.now().toString())
         
         return {
           success: true,
@@ -244,7 +272,6 @@ const actions = {
         
         // 如果是"未找到用户信息"且重试次数少于2次，则等待后重试
         if (errorMessage.includes('未找到用户') && retryCount < 2) {
-          console.log(`用户可能刚注册，等待${1000 * (retryCount + 1)}ms后重试登录...`)
           await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)))
           return this.login(loginData, retryCount + 1)
         }
@@ -257,7 +284,6 @@ const actions = {
       
       // 如果是"未找到用户信息"且重试次数少于2次，则等待后重试
       if (message.includes('未找到用户') && retryCount < 2) {
-        console.log(`用户可能刚注册，等待${1000 * (retryCount + 1)}ms后重试登录...`)
         await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)))
         return this.login(loginData, retryCount + 1)
       }
@@ -305,47 +331,43 @@ const actions = {
   // 用户登出
   async logout() {
     try {
-      console.log('🚪 开始执行登出操作 - 时间戳:', new Date().toISOString())
-      console.trace('🚪 登出操作调用堆栈:')
       
       // 设置登出进行中标志
       state.isLogoutInProgress = true
       this.setLoading(true)
       
       // 立即停止所有轮询，不等待API响应
-      console.log('🚨 立即停止所有轮询')
       const { forceStopAllPolling, getActivePollingKeys } = usePolling()
       const activePolling = getActivePollingKeys()
-      console.log('📊 登出时活跃轮询:', activePolling)
       
       // 强制停止所有轮询（使用最暴力的方法）
-      console.log('🧹 使用暴力模式停止所有轮询')
       forceStopAllPolling()
       
       // 延迟再次检查和清理（多重保险）
       setTimeout(() => {
         const stillActive = getActivePollingKeys()
         if (stillActive.length > 0) {
-          console.log('🚨 登出后发现残留轮询，再次强制清理:', stillActive)
           forceStopAllPolling()
-        } else {
-          console.log('✅ 确认登出时所有轮询已彻底停止')
         }
       }, 50)
       
       setTimeout(() => {
         const finalCheck = getActivePollingKeys()
         if (finalCheck.length > 0) {
-          console.log('🚨 最终检查发现残留轮询，最后一次强制清理:', finalCheck)
           forceStopAllPolling()
-        } else {
-          console.log('✅ 最终确认：登出时轮询已彻底清理')
         }
       }, 200)
       
+      // 调用退出登录API
+      try {
+        await authAPI.logout()
+      } catch (error) {
+        console.error('❌ 退出登录API调用失败:', error)
+        // 即使API调用失败，也要清除本地状态
+      }
+      
       this.clearAuth()
       
-      console.log('✅ 登出操作完成')
     } catch (error) {
       console.error('❌ 登出过程发生错误:', error)
       // 确保本地状态被清除
@@ -371,17 +393,10 @@ const actions = {
       this.setLoading(true)
       this.clearError()
       
-      console.log('Auth Store - 开始修改密码')
       const response = await authAPI.changePassword(changePasswordData)
       
       // 根据API文档，成功响应的code应该为0或200
       if (response.code === 0 || response.code === 200) {
-        console.log('Auth Store - 密码修改成功:', {
-          code: response.code,
-          message: response.message,
-          timestamp: response.timestamp,
-          requestId: response.requestId
-        })
         
         return {
           success: true,
@@ -427,7 +442,6 @@ const actions = {
   
   // 清除认证状态（Session认证模式）
   clearAuth() {
-    console.log('🧹 清除认证状态（Session认证模式）')
     
     // 清除内存状态（Session认证模式）
     state.user = null
@@ -438,26 +452,28 @@ const actions = {
     // 清除本地存储的记住登录状态
     storage.clearRememberedUser()
     
+    // 清除会话相关的存储
+    sessionStorage.removeItem('session_start_time')
+    sessionStorage.removeItem('temp_auth')
+    sessionStorage.removeItem('login_redirect')
+    
     // 确保清除所有轮询（额外保险 - 强制清理模式）
     try {
       const { clearAllPolling, forceStopAllPolling, getActivePollingKeys } = usePolling()
       
       const activePolling = getActivePollingKeys()
       if (activePolling.length > 0) {
-        console.log('🚨 认证清除时发现活跃轮询:', activePolling)
         clearAllPolling()
         
         // 双重保险：强制清理
         setTimeout(() => {
           const stillActive = getActivePollingKeys()
           if (stillActive.length > 0) {
-            console.log('🚨 强制清理残留轮询:', stillActive)
             forceStopAllPolling()
           }
         }, 100)
       }
       
-      console.log('✅ 认证状态清除时轮询清理完成')
     } catch (e) {
       console.warn('⚠️ 认证状态清除时轮询清理失败', e)
     }
@@ -497,41 +513,34 @@ const actions = {
     try {
       // 如果正在登出过程中，直接返回false
       if (state.isLogoutInProgress) {
-        console.log('🚪 登出进行中，跳过用户信息获取')
         return false
       }
       
       // 如果刚刚登出（立即允许重新登录），避免立即调用认证检查
       const timeSinceLogout = Date.now() - state.lastLogoutTime
       if (timeSinceLogout < 100) {
-        console.log(`🚪 刚刚登出 ${timeSinceLogout}ms 前，跳过用户信息获取`)
         return false
       }
       
       // 双重检查：再次确认不在登出状态
       if (state.isLogoutInProgress) {
-        console.log('🚪 双重检查：仍在登出状态，跳过用户信息获取')
         return false
       }
       
-      console.log('🔍 开始获取当前用户信息')
       const response = await authAPI.getCurrentUser()
       
       // 成功判定：兼容 code === 0 或 code === 200
       const isSuccessCode = response && (response.code === 0 || response.code === 200)
       if (isSuccessCode && response.data) {
         this.setUser(response.data)
-        console.log('获取用户信息成功:', response.data.username, response.data.role)
         return true
       } else {
-        console.log('获取用户信息失败，无有效会话')
         this.clearAuth()
         return false
       }
     } catch (error) {
       // 401/403 表示未登录或无权限，这是正常情况
       if (error.response?.status === 401 || error.response?.status === 403) {
-        console.log('当前无有效会话')
         this.clearAuth()
         return false
       }
@@ -552,9 +561,7 @@ const actions = {
       console.error('检查用户名可用性失败:', error)
       return false
     }
-  },
-
-  
+  }
 }
 
 // 导出认证store

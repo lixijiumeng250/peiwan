@@ -28,10 +28,10 @@ export function useUnreadCount() {
         const result = await response.json()
         const count = result.data || 0
         unreadCount.value = count
-        console.log('未读通知数量获取成功:', count)
+        // console.log('未读通知数量获取成功:', count)
         return count
       } else if (response.status === 401) {
-        console.log('认证失效，停止获取未读数量')
+        // console.log('认证失效，停止获取未读数量')
         authStore.actions.logout()
         throw new Error('认证失效')
       } else {

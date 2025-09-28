@@ -417,7 +417,7 @@ export default {
     
     // 处理密码修改成功
     const handlePasswordChangeSuccess = (result) => {
-      console.log('Header - 密码修改成功:', result)
+      // console.log('Header - 密码修改成功:', result)
       // 不需要显示额外的成功提示，ChangePassword组件已经显示了
     }
     
@@ -449,7 +449,7 @@ export default {
         await markOrderNotificationAsRead(notificationId)
         // 更新全局未读数量
         await fetchUnreadCount()
-        console.log('Header工单通知标记已读后已更新全局未读数量')
+        // console.log('Header工单通知标记已读后已更新全局未读数量')
       } catch (error) {
         console.error('标记工单通知已读或更新未读数量失败:', error)
       }
@@ -460,7 +460,7 @@ export default {
         await markEmployeeStatusNotificationAsRead(notificationId)
         // 更新全局未读数量
         await fetchUnreadCount()
-        console.log('Header员工状态通知标记已读后已更新全局未读数量')
+        // console.log('Header员工状态通知标记已读后已更新全局未读数量')
       } catch (error) {
         console.error('标记员工状态通知已读或更新未读数量失败:', error)
       }
@@ -475,7 +475,7 @@ export default {
         }
         // 更新全局未读数量
         await fetchUnreadCount()
-        console.log('Header全部标记已读后已更新全局未读数量')
+        // console.log('Header全部标记已读后已更新全局未读数量')
       } catch (error) {
         console.error('标记所有通知为已读失败:', error)
       }
@@ -496,7 +496,7 @@ export default {
     const goToOrderDetail = async (notification) => {
       const orderData = getOrderData(notification)
       if (orderData?.orderId) {
-        console.log('跳转到工单详情:', orderData.orderId)
+        // console.log('跳转到工单详情:', orderData.orderId)
         ElMessage.info(`工单详情功能待开发，工单号：${orderData.orderNumber}`)
         
         // 标记为已读
@@ -505,7 +505,7 @@ export default {
           // 更新全局未读数量
           try {
             await fetchUnreadCount()
-            console.log('Header工单通知标记已读后已更新全局未读数量')
+            // console.log('Header工单通知标记已读后已更新全局未读数量')
           } catch (error) {
             console.error('更新全局未读数量失败:', error)
           }
@@ -516,7 +516,7 @@ export default {
     const goToEmployeeDetail = async (notification) => {
       const statusData = getEmployeeStatusData(notification)
       if (statusData?.employeeId) {
-        console.log('跳转到员工详情:', statusData.employeeId)
+        // console.log('跳转到员工详情:', statusData.employeeId)
         
         // 标记为已读
         if (!notification.isRead) {
@@ -524,7 +524,7 @@ export default {
           // 更新全局未读数量
           try {
             await fetchUnreadCount()
-            console.log('Header员工状态通知标记已读后已更新全局未读数量')
+            // console.log('Header员工状态通知标记已读后已更新全局未读数量')
           } catch (error) {
             console.error('更新全局未读数量失败:', error)
           }

@@ -248,7 +248,7 @@ export default {
             deleted: profile.deleted || 0
           })
           
-          console.log('加载的个人资料:', personalInfo)
+          // console.log('加载的个人资料:', personalInfo)
         }
       } catch (error) {
         console.error('加载个人资料失败:', error)
@@ -311,7 +311,7 @@ export default {
                       props.employee?.userId || 
                       props.employee?.id
         
-        console.log('更新员工资料 - userId:', userId, 'employee对象:', props.employee)
+        // console.log('更新员工资料 - userId:', userId, 'employee对象:', props.employee)
         
         const updateData = {
           id: personalInfo.id || 0, // 员工资料ID，如果没有则为0（新建）
@@ -323,7 +323,7 @@ export default {
           deleted: personalInfo.deleted || 0 // 保持原有删除标记
         }
         
-        console.log('发送更新请求的数据:', updateData)
+        // console.log('发送更新请求的数据:', updateData)
         
         await updateProfile(updateData)
         
@@ -454,7 +454,7 @@ export default {
         personalInfo.gender = props.employee.gender || ''
         personalInfo.workStatus = props.employee.workStatus || ''
         
-        console.log('初始化员工数据 - userId:', userId, 'employee对象:', props.employee)
+        // console.log('初始化员工数据 - userId:', userId, 'employee对象:', props.employee)
       }
       
       // 始终尝试从API加载完整的员工资料
@@ -481,7 +481,7 @@ export default {
         personalInfo.gender = newEmployee.gender || ''
         personalInfo.workStatus = newEmployee.workStatus || ''
         
-        console.log('监听到employee变化 - userId:', userId, 'newEmployee:', newEmployee)
+        // console.log('监听到employee变化 - userId:', userId, 'newEmployee:', newEmployee)
       }
     }, { deep: true })
     

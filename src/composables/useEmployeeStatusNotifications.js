@@ -36,17 +36,17 @@ export function useEmployeeStatusNotifications() {
           employeeStatusNotifications.value = sortedNotifications
           unreadEmployeeStatusCount.value = sortedNotifications.filter(n => !n.isRead).length
           
-          console.log('员工状态通知获取成功:', {
-            total: sortedNotifications.length,
-            unread: unreadEmployeeStatusCount.value
-          })
+          // console.log('员工状态通知获取成功:', {
+          //   total: sortedNotifications.length,
+          //   unread: unreadEmployeeStatusCount.value
+          // })
         } else {
           console.warn('员工状态通知接口返回异常:', result)
           employeeStatusNotifications.value = []
           unreadEmployeeStatusCount.value = 0
         }
       } else if (response.status === 401) {
-        console.log('认证失效，停止获取员工状态通知')
+        // console.log('认证失效，停止获取员工状态通知')
         authStore.actions.logout()
         throw new Error('认证失效')
       } else {
@@ -89,7 +89,7 @@ export function useEmployeeStatusNotifications() {
       })
 
       if (response.ok) {
-        console.log(`开始淡出员工状态通知动画 - 通知ID: ${notificationId}`)
+        // console.log(`开始淡出员工状态通知动画 - 通知ID: ${notificationId}`)
         
         // 立即开始向右淡出动画
         notification.fadeOut = true
@@ -98,7 +98,7 @@ export function useEmployeeStatusNotifications() {
         setTimeout(() => {
           const index = employeeStatusNotifications.value.findIndex(n => n.id === notificationId)
           if (index > -1) {
-            console.log(`从员工状态通知列表中移除: ${notificationId}`)
+            // console.log(`从员工状态通知列表中移除: ${notificationId}`)
             employeeStatusNotifications.value.splice(index, 1)
             unreadEmployeeStatusCount.value = Math.max(0, unreadEmployeeStatusCount.value - 1)
           }
@@ -165,7 +165,7 @@ export function useEmployeeStatusNotifications() {
         }, 600) // 给足够时间完成动画
         
         // ElMessage.success(`已标记 ${unreadNotifications.length} 条通知为已读`) // 客服页面不显示成功提示
-        console.log('所有员工状态通知已标记为已读')
+        // console.log('所有员工状态通知已标记为已读')
         return true
       } else {
         console.error('标记所有员工状态通知为已读失败:', response.status)
@@ -251,10 +251,10 @@ export function useEmployeeStatusNotifications() {
       employeeStatusNotifications.value = sortedNotifications
       unreadEmployeeStatusCount.value = sortedNotifications.filter(n => !n.isRead).length
       
-      console.log('员工状态通知数据已更新:', {
-        total: sortedNotifications.length,
-        unread: unreadEmployeeStatusCount.value
-      })
+      // console.log('员工状态通知数据已更新:', {
+      //   total: sortedNotifications.length,
+      //   unread: unreadEmployeeStatusCount.value
+      // })
     }
   }
 
@@ -271,7 +271,7 @@ export function useEmployeeStatusNotifications() {
       fetchEmployeeStatusNotifications()
     }, 30000)
     
-    console.log('员工状态通知轮询已启动')
+    // console.log('员工状态通知轮询已启动')
   }
   
   // 停止轮询
@@ -279,19 +279,19 @@ export function useEmployeeStatusNotifications() {
     if (pollingTimer) {
       clearInterval(pollingTimer)
       pollingTimer = null
-      console.log('员工状态通知轮询已停止')
+      // console.log('员工状态通知轮询已停止')
     }
   }
   
   // 组件挂载时自动开始轮询
   onMounted(() => {
-    console.log('useEmployeeStatusNotifications onMounted - 开始轮询')
+    // console.log('useEmployeeStatusNotifications onMounted - 开始轮询')
     startPolling()
   })
   
   // 组件卸载时停止轮询
   onUnmounted(() => {
-    console.log('useEmployeeStatusNotifications onUnmounted - 停止轮询')
+    // console.log('useEmployeeStatusNotifications onUnmounted - 停止轮询')
     stopPolling()
   })
 

@@ -1201,7 +1201,7 @@ export default {
       isLoading.value = true
       
       try {
-        console.log(`开始加载工作记录，employeeId: ${props.employeeId}, forceRefresh: ${forceRefresh}, retryCount: ${retryCount}`)
+        // console.log(`开始加载工作记录，employeeId: ${props.employeeId}, forceRefresh: ${forceRefresh}, retryCount: ${retryCount}`)
         
         // 如果是强制刷新，清除可能的缓存
         if (forceRefresh) {
@@ -1214,44 +1214,44 @@ export default {
         
         if (userRole?.toUpperCase() === 'CS') {
           // 客服角色根据是否指定员工选择不同的接口
-          console.log('客服角色 - 检查参数:', {
-            userRole: userRole,
-            employeeId: props.employeeId,
-            employee: props.employee,
-            'employee.userId': props.employee?.userId
-          })
+          // console.log('客服角色 - 检查参数:', {
+          //   userRole: userRole,
+          //   employeeId: props.employeeId,
+          //   employee: props.employee,
+          //   'employee.userId': props.employee?.userId
+          // })
           
           if (props.employeeId) {
             // 在员工详情页面，使用新的客服获取指定员工工单接口
-            console.log('客服角色，查看特定员工工单，调用getEmployeeOrders，员工ID:', props.employeeId)
+            // console.log('客服角色，查看特定员工工单，调用getEmployeeOrders，员工ID:', props.employeeId)
             response = await getEmployeeOrders(props.employeeId)
           } else {
             // 查看所有工单，使用原有的cs/orders接口（仅在客服主页面）
-            console.log('客服角色，查看所有工单，调用getOrders')
+            // console.log('客服角色，查看所有工单，调用getOrders')
             response = await getOrders({})
           }
         } else if (userRole?.toUpperCase() === 'ADMIN') {
           // 管理员角色：使用X-User-Id请求头调用员工工单接口
           if (props.employeeId && props.employee?.userId) {
-            console.log('管理员角色，查看特定员工工单，调用getEmployeeOrdersForAdmin，员工userId:', props.employee.userId)
+            // console.log('管理员角色，查看特定员工工单，调用getEmployeeOrdersForAdmin，员工userId:', props.employee.userId)
             response = await getEmployeeOrdersForAdmin(props.employee.userId)
           } else {
-            console.log('管理员角色，缺少员工userId，返回空数据')
+            // console.log('管理员角色，缺少员工userId，返回空数据')
             response = { code: 200, data: [] }
           }
         } else {
           // 员工角色使用原有的 employee 接口
-          console.log('员工角色，调用getAssignedOrders')
+          // console.log('员工角色，调用getAssignedOrders')
           response = await getAssignedOrders()
         }
         
         if ((response.code === 0 || response.code === 200) && response.data) {
-          console.log('API响应数据:', response.data)
+          // console.log('API响应数据:', response.data)
           if (response.data.length > 0) {
-            console.log('第一条工单数据结构:', response.data[0])
-            console.log('第一条工单的ID字段:', response.data[0].id)
-            console.log('第一条工单的orderNumber字段:', response.data[0].orderNumber)
-            console.log('第一条工单的状态:', response.data[0].status)
+            // console.log('第一条工单数据结构:', response.data[0])
+            // console.log('第一条工单的ID字段:', response.data[0].id)
+            // console.log('第一条工单的orderNumber字段:', response.data[0].orderNumber)
+            // console.log('第一条工单的状态:', response.data[0].status)
           }
           
           // 处理数据格式，确保字段映射正确
@@ -1293,26 +1293,26 @@ export default {
           
           // 调试日志：检查处理后的数据
           if (processedData.length > 0) {
-            console.log('处理后的第一条工单数据:', processedData[0])
-            console.log('处理后的工单ID:', processedData[0].id)
-            console.log('处理后的工单orderNumber:', processedData[0].orderNumber)
+            // console.log('处理后的第一条工单数据:', processedData[0])
+            // console.log('处理后的工单ID:', processedData[0].id)
+            // console.log('处理后的工单orderNumber:', processedData[0].orderNumber)
             
             // 检查截图相关字段
-            console.log('=== 工单截图字段检查 ===')
-            console.log('- screenshots:', processedData[0]?.screenshots)
-            console.log('- acceptScreenshot:', processedData[0]?.acceptScreenshot)
-            console.log('- completeScreenshot:', processedData[0]?.completeScreenshot)
-            console.log('- acceptImageUrl:', processedData[0]?.acceptImageUrl)
-            console.log('- completeImageUrl:', processedData[0]?.completeImageUrl)
-            console.log('- imageUrl:', processedData[0]?.imageUrl)
-            console.log('- 所有字段:', Object.keys(processedData[0]))
-            console.log('========================')
+            // console.log('=== 工单截图字段检查 ===')
+            // console.log('- screenshots:', processedData[0]?.screenshots)
+            // console.log('- acceptScreenshot:', processedData[0]?.acceptScreenshot)
+            // console.log('- completeScreenshot:', processedData[0]?.completeScreenshot)
+            // console.log('- acceptImageUrl:', processedData[0]?.acceptImageUrl)
+            // console.log('- completeImageUrl:', processedData[0]?.completeImageUrl)
+            // console.log('- imageUrl:', processedData[0]?.imageUrl)
+            // console.log('- 所有字段:', Object.keys(processedData[0]))
+            // console.log('========================')
           }
         } else {
           console.error('获取工单数据失败，响应:', response)
           // 如果响应失败且还有重试次数，则重试
           if (retryCount < maxRetries) {
-            console.log(`获取数据失败，进行第 ${retryCount + 1} 次重试...`)
+            // console.log(`获取数据失败，进行第 ${retryCount + 1} 次重试...`)
             await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))) // 递增延迟
             return await loadWorkRecords(forceRefresh, retryCount + 1)
           }
@@ -1324,7 +1324,7 @@ export default {
         console.error('加载工单数据失败:', error)
         // 如果出错且还有重试次数，则重试
         if (retryCount < maxRetries) {
-          console.log(`加载失败，进行第 ${retryCount + 1} 次重试...`)
+          // console.log(`加载失败，进行第 ${retryCount + 1} 次重试...`)
           await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))) // 递增延迟
           return await loadWorkRecords(forceRefresh, retryCount + 1)
         }
@@ -1476,7 +1476,7 @@ export default {
       // 检查用户角色和员工信息
       const userRole = authStore.getters.userRole.value
       if (userRole?.toUpperCase() === 'ADMIN' && (!props.employeeId || !props.employee?.userId)) {
-        console.log('管理员角色但缺少员工信息，跳过工单轮询')
+        // console.log('管理员角色但缺少员工信息，跳过工单轮询')
         return
       }
       
@@ -1490,13 +1490,13 @@ export default {
         const isLogoutInProgress = authStore.state.isLogoutInProgress
         
         if (!isAuthenticated || isLogoutInProgress) {
-          console.log('🚫 用户已登出或登出进行中，停止轮询数据获取')
+          // console.log('🚫 用户已登出或登出进行中，停止轮询数据获取')
           // 立即停止当前轮询
           stopPollingData()
           throw new Error('用户已登出，停止轮询')
         }
         
-        console.log('轮询获取工单数据...')
+        // console.log('轮询获取工单数据...')
         
         // 根据用户角色选择不同的接口
         const userRole = authStore.getters.userRole.value
@@ -1565,7 +1565,6 @@ export default {
       
       // 数据变化处理函数
       const onOrderChange = (newData, oldData, changes) => {
-        console.log('检测到工单数据变化，更新UI')
 
         // 更新工单数据
         workRecords.value = newData
@@ -1586,19 +1585,16 @@ export default {
       // 开始智能轮询
       startOrderSmartPolling(pollingKey, dataFetcher, onOrderChange, interval)
       
-      console.log(`开始智能轮询工单数据，间隔: ${POLLING_CONFIG.EMPLOYEE_ORDERS}秒`)
     }
     
     // 停止轮询
     const stopPollingData = () => {
       const pollingKey = `employee-orders-${props.employeeId || 'all'}`
-      console.log('🛑 EmployeeWorkRecords 停止轮询工单数据')
       
       try {
         stopPolling(pollingKey)
-        console.log('✅ 工单轮询已停止:', pollingKey)
       } catch (e) {
-        console.warn('⚠️ 停止工单轮询失败:', e)
+        console.warn('停止工单轮询失败:', e)
       }
       
       // 额外保险：如果是特定的员工轮询，也尝试停止通用的轮询key
@@ -1606,9 +1602,8 @@ export default {
         try {
           stopPolling('employee-orders-all')
           stopPolling(`employee-orders`)
-          console.log('✅ 额外清理了通用工单轮询')
         } catch (e) {
-          console.warn('⚠️ 清理通用工单轮询失败:', e)
+          console.warn('清理通用工单轮询失败:', e)
         }
       }
     }
@@ -1616,7 +1611,6 @@ export default {
     // 手动刷新数据
     const manualRefresh = async () => {
       try {
-        console.log('手动刷新工单数据')
         await loadWorkRecords(true) // 强制刷新并显示加载状态
         ElMessage.success('工单数据已刷新')
         emit('refresh')
@@ -1643,16 +1637,9 @@ export default {
     
     // 上传接单截图
     const uploadAcceptScreenshot = (order) => {
-      console.log('点击接单，工单信息:', order)
-      console.log('工单ID:', order.id)
-      console.log('工单ID类型:', typeof order.id)
-      console.log('order对象的所有键:', Object.keys(order))
-      console.log('order对象是否有id属性:', order.hasOwnProperty('id'))
-      console.log('order对象是否有orderNumber属性:', order.hasOwnProperty('orderNumber'))
-      
       // 确保order对象有正确的id字段
       if (!order.id && order.orderNumber) {
-        console.log('修复工单ID字段')
+        // console.log('修复工单ID字段')
         order.id = order.orderNumber
       }
       
@@ -1690,29 +1677,17 @@ export default {
         }
 
         userOperationInProgress.value = true // 设置用户操作标记
-        console.log('开始续单，工单ID:', currentOrder.value.id)
-        console.log('续单前工单状态:', currentOrder.value.status)
         
         // 组合续单信息
         const additionalInfo = `续单时长：${renewOrderData.duration}，续单单价：${renewOrderData.price}`
-        console.log('续单信息:', additionalInfo)
         
         const response = await renewOrder(currentOrder.value.id, { additionalInfo })
-        console.log('续单API响应:', response)
         
         if (response && (response.code === 0 || response.code === 200 || response.status === 200)) {
           ElMessage.success('续单成功，工单状态已更新为进行中')
           continueOrderVisible.value = false
           
-          // 如果API返回了新的工单数据，可以直接更新
-          if (response.data) {
-            console.log('续单API返回的新工单数据:', response.data)
-          }
-          
-          // 刷新工单列表
-          console.log('开始刷新工单列表...')
           await loadWorkRecords(true)
-          console.log('工单列表刷新完成')
           emit('refresh')
         } else {
           console.error('续单失败，响应:', response)
@@ -1729,19 +1704,7 @@ export default {
     
     // 查看工单详情
     const viewOrderDetail = (order) => {
-      console.log('查看工单详情，工单数据:', order)
-      console.log('工单截图相关字段检查:')
-      console.log('- screenshots:', order?.screenshots)
-      console.log('- orderInfoScreenshotUrl:', order?.orderInfoScreenshotUrl)
-      console.log('- acceptScreenshotUrl:', order?.acceptScreenshotUrl)
-      console.log('- completeScreenshotUrl:', order?.completeScreenshotUrl)
-      console.log('- acceptScreenshot:', order?.acceptScreenshot)
-      console.log('- completeScreenshot:', order?.completeScreenshot)
-      console.log('- acceptImageUrl:', order?.acceptImageUrl)
-      console.log('- completeImageUrl:', order?.completeImageUrl)
-      console.log('- imageUrl:', order?.imageUrl)
-      console.log('- 所有字段:', Object.keys(order))
-      
+
       // 直接使用工单列表中的数据
       currentOrderDetail.value = order
       orderDetailVisible.value = true
@@ -1791,8 +1754,6 @@ export default {
     const getOrderInfoScreenshot = () => {
       if (!currentOrderDetail.value) return null
       
-      console.log('获取派单截图，当前工单详情:', currentOrderDetail.value)
-      console.log('orderInfoScreenshotUrl:', currentOrderDetail.value.orderInfoScreenshotUrl)
       
       // 直接使用独立的派单截图字段
       return currentOrderDetail.value.orderInfoScreenshotUrl || null
@@ -1802,9 +1763,6 @@ export default {
     const getOrderInfoScreenshotForDialog = (order) => {
       if (!order) return null
       
-      console.log('获取对话框派单截图，当前工单:', order)
-      console.log('orderInfoScreenshotUrl:', order.orderInfoScreenshotUrl)
-      
       // 直接使用独立的派单截图字段
       return order.orderInfoScreenshotUrl || null
     }
@@ -1813,11 +1771,6 @@ export default {
     const getAcceptScreenshotForDialog = (order) => {
       if (!order) return null
       
-      console.log('获取对话框接单截图，当前工单:', order)
-      console.log('acceptanceScreenshotUrl:', order.acceptanceScreenshotUrl)
-      console.log('acceptScreenshotUrl:', order.acceptScreenshotUrl)
-      console.log('acceptImageUrl:', order.acceptImageUrl)
-      
       // 尝试多个可能的接单截图字段名称
       return order.acceptanceScreenshotUrl || order.acceptScreenshotUrl || order.acceptImageUrl || null
     }
@@ -1825,10 +1778,7 @@ export default {
     // 获取完成截图（用于对话框）
     const getCompleteScreenshotForDialog = (order) => {
       if (!order) return null
-      
-      console.log('获取对话框完成截图，当前工单:', order)
-      console.log('completionScreenshotUrl:', order.completionScreenshotUrl)
-      
+
       // 直接使用完成截图字段
       return order.completionScreenshotUrl || null
     }
@@ -1837,9 +1787,6 @@ export default {
     const getAcceptScreenshot = () => {
       if (!currentOrderDetail.value) return null
       
-      console.log('获取接单截图，当前工单详情:', currentOrderDetail.value)
-      console.log('acceptanceScreenshotUrl:', currentOrderDetail.value.acceptanceScreenshotUrl)
-      
       // 直接使用独立的接单截图字段
       return currentOrderDetail.value.acceptanceScreenshotUrl || null
     }
@@ -1847,10 +1794,7 @@ export default {
     // 获取完成截图
     const getCompleteScreenshot = () => {
       if (!currentOrderDetail.value) return null
-      
-      console.log('获取完成截图，当前工单详情:', currentOrderDetail.value)
-      console.log('completionScreenshotUrl:', currentOrderDetail.value.completionScreenshotUrl)
-      
+
       // 直接使用独立的完成截图字段
       return currentOrderDetail.value.completionScreenshotUrl || null
     }
@@ -2189,14 +2133,8 @@ export default {
       isUploading.value = true
       userOperationInProgress.value = true // 设置用户操作标记
       try {
-        // 先上传图片
-        console.log('开始上传接单截图...', acceptFile.value.raw)
-        console.log('文件名:', acceptFile.value.raw.name)
-        console.log('文件大小:', acceptFile.value.raw.size)
-        console.log('文件类型:', acceptFile.value.raw.type)
-        
         const uploadResult = await uploadImage(acceptFile.value.raw)
-        console.log('图片上传完整结果:', JSON.stringify(uploadResult, null, 2))
+        // console.log('图片上传完整结果:', JSON.stringify(uploadResult, null, 2))
         
         // 根据API文档，图片URL在response.data字段中
         if (!uploadResult || (uploadResult.code !== 0 && uploadResult.code !== 200)) {
@@ -2206,27 +2144,15 @@ export default {
         }
         
         const imageUrl = uploadResult.data
-        console.log('提取的图片URL:', imageUrl)
-        console.log('图片URL类型:', typeof imageUrl)
-        console.log('图片URL是否为空:', !imageUrl)
         
         if (!imageUrl) {
           throw new Error('图片上传成功但未返回图片URL')
         }
-        
-        console.log('接单截图上传结果:', uploadResult)
-        console.log('接单截图URL:', imageUrl)
-        console.log('解析后的预览URL:', getPreviewUrl(imageUrl))
-        console.log('准备调用接单API，orderId:', currentOrder.value.id)
-        console.log('orderId类型:', typeof currentOrder.value.id)
-        console.log('完整的工单对象:', currentOrder.value)
-        console.log('工单对象的所有键:', Object.keys(currentOrder.value))
-        
         // 调用接单API
         const acceptData = { 
           imageUrl: imageUrl
         }
-        console.log('发送接单请求数据:', acceptData)
+        // console.log('发送接单请求数据:', acceptData)
         await acceptOrder(currentOrder.value.id, acceptData)
         
         ElMessage.success('接单成功，工单状态已更新为进行中')
@@ -2263,9 +2189,9 @@ export default {
       userOperationInProgress.value = true // 设置用户操作标记
       try {
         // 先上传图片
-        console.log('开始上传完成截图...', completeFile.value.raw)
+        // console.log('开始上传完成截图...', completeFile.value.raw)
         const uploadResult = await uploadCompleteImage(completeFile.value.raw)
-        console.log('图片上传结果:', uploadResult)
+        // console.log('图片上传结果:', uploadResult)
         
         // 根据API文档，图片URL在response.data字段中
         if (!uploadResult || (uploadResult.code !== 0 && uploadResult.code !== 200)) {
@@ -2277,15 +2203,11 @@ export default {
           throw new Error('图片上传成功但未返回图片URL')
         }
         
-        console.log('完成截图上传结果:', uploadResult)
-        console.log('完成截图URL:', imageUrl)
-        console.log('解析后的预览URL:', getPreviewUrl(imageUrl))
-        
         // 调用完成订单API
         const completeData = { 
           imageUrl: imageUrl
         }
-        console.log('发送完成请求数据:', completeData)
+        // console.log('发送完成请求数据:', completeData)
         await completeOrder(currentOrder.value.id, completeData)
         
         ElMessage.success('工单已提交审核')
@@ -2313,7 +2235,6 @@ export default {
     
     // 重新上传截图
     const reuploadScreenshots = (order) => {
-      console.log('重新上传截图，工单信息:', order)
       currentOrder.value = order
       
       // 清理之前的文件
@@ -2574,7 +2495,7 @@ export default {
       userOperationInProgress.value = true // 设置用户操作标记
       try {
         // 上传完成图片
-        console.log('开始重新上传完成截图...', reuploadCompleteFile.value.raw)
+        // console.log('开始重新上传完成截图...', reuploadCompleteFile.value.raw)
         const completeUploadResult = await uploadImage(reuploadCompleteFile.value.raw)
         const completeImageUrl = completeUploadResult.data
         
@@ -2582,7 +2503,7 @@ export default {
           throw new Error('完成图片上传成功但未返回图片URL')
         }
         
-        console.log('完成图片上传成功，URL:', completeImageUrl)
+        // console.log('完成图片上传成功，URL:', completeImageUrl)
         
         // 调用重新提交API（使用专门的重新提交接口）
         const { resubmitOrder } = await import('../api/employee')
@@ -2606,24 +2527,17 @@ export default {
     
     // 预览图片
     const previewImage = (imageUrl) => {
-      console.log('预览图片，原始路径:', imageUrl)
-      console.log('处理后的路径:', getPreviewUrl(imageUrl))
       showImagePreview(imageUrl)
     }
     
     // 测试图片路径解析功能
     const testImagePathParsing = () => {
       const testPath = "/api/uploads/2025/09/09/66a1c3ce-67e7-4af8-9017-6455a04db1d4.png"
-      console.log('=== 图片路径解析测试 ===')
-      console.log('测试路径:', testPath)
-      console.log('解析后的预览URL:', getPreviewUrl(testPath))
-      console.log('图片信息:', getImageInfo(testPath))
-      console.log('========================')
     }
     
     // 监听employeeId变化
     watch(() => props.employeeId, async (newEmployeeId, oldEmployeeId) => {
-      console.log(`employeeId 变化: ${oldEmployeeId} -> ${newEmployeeId}`)
+      // console.log(`employeeId 变化: ${oldEmployeeId} -> ${newEmployeeId}`)
       if (newEmployeeId !== oldEmployeeId) {
         // 等待DOM更新完成
         await nextTick()
@@ -2636,10 +2550,10 @@ export default {
 
     // 生命周期
     onMounted(async () => {
-      console.log('EmployeeWorkRecords onMounted, employeeId:', props.employeeId)
+      // console.log('EmployeeWorkRecords onMounted, employeeId:', props.employeeId)
       // 如果是在员工详情页面，等待员工信息加载完成
       if (props.employeeId) {
-        console.log('在员工详情页面，等待员工信息加载完成...')
+        // console.log('在员工详情页面，等待员工信息加载完成...')
         // 不在这里立即加载，等待 watch 监听器触发
       } else {
         // 在客服主页面，正常加载
@@ -2662,7 +2576,7 @@ export default {
 
     // 组件激活时刷新数据（用于keep-alive场景）
     onActivated(async () => {
-      console.log('EmployeeWorkRecords onActivated, employeeId:', props.employeeId)
+      // console.log('EmployeeWorkRecords onActivated, employeeId:', props.employeeId)
       await nextTick()
       loadWorkRecords(true)
       
@@ -2672,26 +2586,15 @@ export default {
     
     // 组件卸载时停止轮询
     onUnmounted(() => {
-      console.log('EmployeeWorkRecords onUnmounted, 停止轮询')
+      // console.log('EmployeeWorkRecords onUnmounted, 停止轮询')
       stopPollingData()
     })
 
     // 监听员工信息变化，当员工信息加载完成后重新获取工单
     watch(() => props.employee, (newEmployee, oldEmployee) => {
-      console.log('EmployeeWorkRecords - watch触发:', { 
-        newEmployee, 
-        oldEmployee,
-        hasUserId: !!newEmployee?.userId,
-        employeeId: props.employeeId
-      })
-      
+
       // 确保在员工详情页面且员工信息包含userId
       if (props.employeeId && newEmployee && newEmployee.userId) {
-        console.log('EmployeeWorkRecords - 员工信息已更新，重新加载工单:', {
-          userId: newEmployee.userId,
-          realName: newEmployee.realName
-        })
-        // 延迟一点确保数据稳定
         setTimeout(() => {
           loadWorkRecords(true)
         }, 100)

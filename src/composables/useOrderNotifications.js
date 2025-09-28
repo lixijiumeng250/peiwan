@@ -23,7 +23,7 @@ export function useOrderNotifications() {
       // 计算未读数量
       unreadOrderCount.value = notifications.filter(n => !n.isRead).length
       
-      console.log(`获取到 ${notifications.length} 条工单通知，未读 ${unreadOrderCount.value} 条`)
+      // console.log(`获取到 ${notifications.length} 条工单通知，未读 ${unreadOrderCount.value} 条`)
       return notifications
     } catch (error) {
       console.error('获取工单通知失败:', error)
@@ -46,7 +46,7 @@ export function useOrderNotifications() {
     try {
       await notificationManager.markAsRead(notificationId)
       
-      console.log(`开始淡出工单通知动画 - 通知ID: ${notificationId}`)
+      // console.log(`开始淡出工单通知动画 - 通知ID: ${notificationId}`)
       
       // 立即开始向右淡出动画
       notification.fadeOut = true
@@ -55,7 +55,7 @@ export function useOrderNotifications() {
       setTimeout(() => {
         const index = orderNotifications.value.findIndex(n => n.id === notificationId)
         if (index > -1) {
-          console.log(`从工单通知列表中移除: ${notificationId}`)
+          // console.log(`从工单通知列表中移除: ${notificationId}`)
           orderNotifications.value.splice(index, 1)
           unreadOrderCount.value = Math.max(0, unreadOrderCount.value - 1)
         }
@@ -134,7 +134,7 @@ export function useOrderNotifications() {
     orderNotifications.value.unshift(notification)
     unreadOrderCount.value += 1
     
-    console.log('收到新工单通知:', data)
+    // console.log('收到新工单通知:', data)
   }
 
   /**
@@ -142,7 +142,7 @@ export function useOrderNotifications() {
    */
   function handleUnreadCountChange(count) {
     // 可以在这里处理全局未读数量变化
-    console.log('全局未读通知数量:', count)
+    // console.log('全局未读通知数量:', count)
   }
 
   // 组件挂载时的初始化

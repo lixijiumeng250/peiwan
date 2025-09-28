@@ -24,7 +24,7 @@ class NotificationManager {
   startPolling() {
     if (this.isPolling) return
     
-    console.log('启动通知轮询')
+    // console.log('启动通知轮询')
     this.isPolling = true
     this.poll()
   }
@@ -33,7 +33,7 @@ class NotificationManager {
    * 停止轮询
    */
   stopPolling() {
-    console.log('停止通知轮询')
+    // console.log('停止通知轮询')
     this.isPolling = false
     if (this.pollingTimer) {
       clearTimeout(this.pollingTimer)
@@ -51,7 +51,7 @@ class NotificationManager {
       // 检查用户是否已登录
       const token = localStorage.getItem('token')
       if (!token) {
-        console.log('用户未登录，暂停轮询')
+        // console.log('用户未登录，暂停轮询')
         this.scheduleNextPoll()
         return
       }
@@ -83,7 +83,7 @@ class NotificationManager {
           this.triggerCallbacks('unreadCountChange', newCount)
         }
       } else if (countResponse.status === 401) {
-        console.log('认证失效，停止轮询')
+        // console.log('认证失效，停止轮询')
         this.handleAuthError()
         return
       }
@@ -145,7 +145,7 @@ class NotificationManager {
    */
   handleNewNotifications(notifications) {
     notifications.forEach(notification => {
-      console.log('收到新通知:', notification)
+      // console.log('收到新通知:', notification)
       
       switch (notification.type) {
         case 'EMPLOYEE_STATUS_CHANGE':
@@ -181,7 +181,7 @@ class NotificationManager {
         }
       })
       
-      console.log('员工状态变更通知:', data)
+      // console.log('员工状态变更通知:', data)
     } catch (error) {
       console.error('解析员工状态通知失败:', error)
     }
@@ -208,7 +208,7 @@ class NotificationManager {
         }
       })
       
-      console.log('工单派发通知:', data)
+      // console.log('工单派发通知:', data)
     } catch (error) {
       console.error('解析工单通知失败:', error)
     }
@@ -250,7 +250,7 @@ class NotificationManager {
       if (response.ok) {
         this.unreadCount = Math.max(0, this.unreadCount - 1)
         this.triggerCallbacks('unreadCountChange', this.unreadCount)
-        console.log(`通知 ${notificationId} 已标记为已读`)
+        // console.log(`通知 ${notificationId} 已标记为已读`)
         return true
       } else {
         console.error('标记已读失败 - HTTP状态:', response.status)
@@ -286,7 +286,7 @@ class NotificationManager {
       if (response.ok) {
         this.unreadCount = Math.max(0, this.unreadCount - notificationIds.length)
         this.triggerCallbacks('unreadCountChange', this.unreadCount)
-        console.log(`批量标记 ${notificationIds.length} 个通知为已读`)
+        // console.log(`批量标记 ${notificationIds.length} 个通知为已读`)
       }
     } catch (error) {
       console.error('批量标记已读失败:', error)
@@ -314,7 +314,7 @@ class NotificationManager {
       if (response.ok) {
         this.unreadCount = 0
         this.triggerCallbacks('unreadCountChange', 0)
-        console.log('所有通知已标记为已读')
+        // console.log('所有通知已标记为已读')
       }
     } catch (error) {
       console.error('标记所有已读失败:', error)
@@ -375,7 +375,7 @@ class NotificationManager {
    */
   setPollingInterval(interval) {
     this.pollingInterval = Math.max(1000, interval) // 最小1秒
-    console.log(`轮询间隔已调整为: ${this.pollingInterval}ms`)
+    // console.log(`轮询间隔已调整为: ${this.pollingInterval}ms`)
   }
 
   /**

@@ -5,7 +5,7 @@ class TabStorage {
   constructor() {
     // 为每个标签页生成唯一ID
     this.tabId = this.getOrCreateTabId()
-    console.log('TabStorage 初始化，标签页ID:', this.tabId)
+    // console.log('TabStorage 初始化，标签页ID:', this.tabId)
   }
 
   /**
@@ -37,7 +37,7 @@ class TabStorage {
   setItem(key, value) {
     const tabKey = this.getTabKey(key)
     sessionStorage.setItem(tabKey, value)
-    console.log(`TabStorage.setItem: ${key} -> ${tabKey}`)
+    // console.log(`TabStorage.setItem: ${key} -> ${tabKey}`)
   }
 
   /**
@@ -46,7 +46,7 @@ class TabStorage {
   getItem(key) {
     const tabKey = this.getTabKey(key)
     const value = sessionStorage.getItem(tabKey)
-    console.log(`TabStorage.getItem: ${key} -> ${tabKey} = ${value ? '有值' : '无值'}`)
+    // console.log(`TabStorage.getItem: ${key} -> ${tabKey} = ${value ? '有值' : '无值'}`)
     return value
   }
 
@@ -56,7 +56,7 @@ class TabStorage {
   removeItem(key) {
     const tabKey = this.getTabKey(key)
     sessionStorage.removeItem(tabKey)
-    console.log(`TabStorage.removeItem: ${key} -> ${tabKey}`)
+    // console.log(`TabStorage.removeItem: ${key} -> ${tabKey}`)
   }
 
   /**
@@ -81,7 +81,7 @@ class TabStorage {
     // 也删除tabId本身
     sessionStorage.removeItem('__tab_id__')
     
-    console.log(`TabStorage.clear: 清除了 ${keysToRemove.length} 个项目`)
+    // console.log(`TabStorage.clear: 清除了 ${keysToRemove.length} 个项目`)
   }
 
   /**
@@ -123,7 +123,7 @@ class TabStorage {
     window.addEventListener('beforeunload', () => {
       // 标签页关闭时清理存储（可选）
       // 注意：这可能会在页面刷新时也触发，需要谨慎使用
-      console.log('标签页即将关闭，准备清理存储')
+      // console.log('标签页即将关闭，准备清理存储')
     })
   }
 
@@ -134,7 +134,7 @@ class TabStorage {
     window.addEventListener('storage', (e) => {
       // 只监听 localStorage 变化，sessionStorage 不会跨标签页
       // 这里主要用于调试和监控
-      console.log('存储变化检测:', e)
+      // console.log('存储变化检测:', e)
     })
   }
 
@@ -142,7 +142,7 @@ class TabStorage {
    * 强制刷新当前标签页的认证状态
    */
   forceRefreshAuth() {
-    console.log(`强制刷新认证状态 - 标签页ID: ${this.tabId}`)
+    // console.log(`强制刷新认证状态 - 标签页ID: ${this.tabId}`)
     
     // 触发自定义事件，通知认证状态需要刷新
     window.dispatchEvent(new CustomEvent('tabAuthRefresh', {
@@ -157,11 +157,11 @@ class TabStorage {
     const token = this.getItem('accessToken')
     const userInfo = this.getItem('user_info')
     
-    console.log(`认证完整性检查 - 标签页ID: ${this.tabId}`, {
-      hasToken: !!token,
-      hasUserInfo: !!userInfo,
-      tokenLength: token ? token.length : 0
-    })
+    // console.log(`认证完整性检查 - 标签页ID: ${this.tabId}`, {
+    //   hasToken: !!token,
+    //   hasUserInfo: !!userInfo,
+    //   tokenLength: token ? token.length : 0
+    // })
     
     // 如果有token但没有用户信息，或者反之，说明数据不完整
     if ((token && !userInfo) || (!token && userInfo)) {
@@ -180,12 +180,12 @@ class TabStorage {
    * 优化：只在首次访问时迁移，避免数据污染
    */
   migrateExistingData(keys) {
-    console.log('开始迁移现有数据到标签页隔离存储...')
+    // console.log('开始迁移现有数据到标签页隔离存储...')
     
     // 检查是否已经迁移过
     const migrationKey = '__migration_completed__'
     if (sessionStorage.getItem(migrationKey)) {
-      console.log('数据已迁移，跳过迁移过程')
+      // console.log('数据已迁移，跳过迁移过程')
       return
     }
     
@@ -194,7 +194,7 @@ class TabStorage {
       if (existingValue && !this.hasItem(key)) {
         // 如果存在旧数据且当前标签页还没有该数据，则迁移
         this.setItem(key, existingValue)
-        console.log(`迁移数据: ${key}`)
+        // console.log(`迁移数据: ${key}`)
         // 迁移后清除原始数据，避免污染其他标签页
         sessionStorage.removeItem(key)
       }
@@ -202,7 +202,7 @@ class TabStorage {
     
     // 标记迁移完成
     sessionStorage.setItem(migrationKey, 'true')
-    console.log('数据迁移完成')
+    // console.log('数据迁移完成')
   }
 }
 
@@ -215,17 +215,17 @@ if (import.meta.env.DEV) {
   
   // 添加调试工具
   window.__debugTabStorage = () => {
-    console.log('=== 标签页存储调试信息 ===')
-    console.log('标签页ID:', tabStorage.getTabId())
-    console.log('所有存储项:', tabStorage.getAllItems())
-    console.log('认证完整性:', tabStorage.validateAuthIntegrity())
+    // console.log('=== 标签页存储调试信息 ===')
+    // console.log('标签页ID:', tabStorage.getTabId())
+    // console.log('所有存储项:', tabStorage.getAllItems())
+    // console.log('认证完整性:', tabStorage.validateAuthIntegrity())
     
     // 显示所有sessionStorage项
-    console.log('所有sessionStorage项:')
+    // console.log('所有sessionStorage项:')
     for (let i = 0; i < sessionStorage.length; i++) {
       const key = sessionStorage.key(i)
       const value = sessionStorage.getItem(key)
-      console.log(`  ${key}: ${value}`)
+      // console.log(`  ${key}: ${value}`)
     }
   }
 }

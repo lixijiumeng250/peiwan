@@ -12,7 +12,7 @@ class AuthManager {
     // 监听认证状态变化
     this.setupAuthListeners()
     
-    console.log(`AuthManager 初始化 - 标签页ID: ${this.tabId}`)
+    // console.log(`AuthManager 初始化 - 标签页ID: ${this.tabId}`)
   }
 
   /**
@@ -28,7 +28,7 @@ class AuthManager {
 
     // 监听存储变化（虽然sessionStorage不跨标签页，但用于调试）
     window.addEventListener('storage', (event) => {
-      console.log('存储变化检测 (localStorage):', event)
+      // console.log('存储变化检测 (localStorage):', event)
     })
   }
 
@@ -78,7 +78,7 @@ class AuthManager {
       timestamp: Date.now()
     }
 
-    console.log(`获取认证状态 - 标签页ID: ${this.tabId}`, authState)
+    // console.log(`获取认证状态 - 标签页ID: ${this.tabId}`, authState)
     return authState
   }
 
@@ -86,12 +86,12 @@ class AuthManager {
    * 设置认证状态
    */
   setAuthState(token, refreshToken, user) {
-    console.log(`设置认证状态 - 标签页ID: ${this.tabId}`, {
-      hasToken: !!token,
-      hasUser: !!user,
-      userRole: user?.role,
-      userId: user?.id
-    })
+    // console.log(`设置认证状态 - 标签页ID: ${this.tabId}`, {
+    //   hasToken: !!token,
+    //   hasUser: !!user,
+    //   userRole: user?.role,
+    //   userId: user?.id
+    // })
 
     // 原子性操作：要么全部设置，要么全部清除
     if (token && user) {
@@ -113,7 +113,7 @@ class AuthManager {
    * 清除认证状态
    */
   clearAuthState() {
-    console.log(`清除认证状态 - 标签页ID: ${this.tabId}`)
+    // console.log(`清除认证状态 - 标签页ID: ${this.tabId}`)
 
     tabStorage.removeItem('accessToken')
     tabStorage.removeItem('refreshToken')
@@ -176,7 +176,7 @@ class AuthManager {
    * 强制同步认证状态
    */
   forceSyncAuth() {
-    console.log(`强制同步认证状态 - 标签页ID: ${this.tabId}`)
+    // console.log(`强制同步认证状态 - 标签页ID: ${this.tabId}`)
     
     const authState = this.getCurrentAuthState()
     if (authState.isAuthenticated) {
@@ -229,7 +229,7 @@ class AuthManager {
     
     // 如果是401错误，清除认证状态
     if (error.response?.status === 401) {
-      console.log('收到401错误，清除认证状态')
+      // console.log('收到401错误，清除认证状态')
       this.clearAuthState()
       return true
     }
@@ -260,8 +260,8 @@ if (import.meta.env.DEV) {
   window.__authManager = authManager
   
   window.__debugAuth = () => {
-    console.log('=== 认证管理器调试信息 ===')
-    console.log(authManager.getDebugInfo())
+    // console.log('=== 认证管理器调试信息 ===')
+    // console.log(authManager.getDebugInfo())
   }
 }
 
