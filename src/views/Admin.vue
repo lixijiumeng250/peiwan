@@ -216,7 +216,7 @@
                       </el-button>
                     </template>
                   </el-table-column>
-                  <el-table-column label="操作" min-width="150" align="center" fixed="right">
+                  <el-table-column label="操作" min-width="210" align="center" fixed="right">
                     <template #default="scope">
                       <div class="table-actions">
                         <el-button 
@@ -228,6 +228,15 @@
                         >
                           <el-icon><Edit /></el-icon>
                         编辑
+                      </el-button>
+                      <el-button 
+                        size="small" 
+                        type="warning" 
+                        text
+                        @click="openResetPassword(scope.row)"
+                        class="action-btn warning"
+                      >
+                        重置密码
                       </el-button>
                       <el-button 
                         size="small" 
@@ -273,10 +282,10 @@
                       <div class="cs-tags-container">
                         <template v-if="getEmployeeCsList(scope.row.id).length > 0">
                           <el-tag 
-                            v-for="cs in getEmployeeCsList(scope.row.id)"
-                            :key="cs.id"
+                            v-for="cs in getEmployeeCsList(scope.row.id)" 
+                            :key="cs.id" 
                             type="success" 
-                            size="small"
+                            size="small" 
                             class="cs-tag"
                           >
                             <el-icon><Service /></el-icon>
@@ -290,7 +299,7 @@
                       </div>
                     </template>
                   </el-table-column>
-                  <el-table-column label="操作" min-width="150" align="center" fixed="right">
+                  <el-table-column label="操作" min-width="210" align="center" fixed="right">
                     <template #default="scope">
                       <div class="table-actions">
                         <el-button 
@@ -302,6 +311,15 @@
                         >
                           <el-icon><Edit /></el-icon>
                         编辑
+                      </el-button>
+                      <el-button 
+                        size="small" 
+                        type="warning" 
+                        text
+                        @click="openResetPassword(scope.row)"
+                        class="action-btn warning"
+                      >
+                        重置密码
                       </el-button>
                       <el-button 
                         size="small" 
@@ -987,6 +1005,43 @@
         <el-button type="primary" @click="handleAssignOrder" :loading="submitting">发派工单</el-button>
       </template>
     </el-dialog>
+
+    <!-- 重置密码对话框 -->
+    <el-dialog 
+      v-model="resetPasswordVisible" 
+      title="重置用户密码" 
+      width="400px"
+      class="reset-password-dialog"
+      :center="true"
+    >
+      <el-form
+        ref="resetPasswordForm"
+        :model="resetPasswordFormData"
+        :rules="resetPasswordFormRules"
+        label-width="100px"
+      >
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input 
+            v-model="resetPasswordFormData.newPassword" 
+            type="password" 
+            placeholder="请输入新密码"
+            show-password
+          />
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword">
+          <el-input 
+            v-model="resetPasswordFormData.confirmPassword" 
+            type="password" 
+            placeholder="请再次输入新密码"
+            show-password
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="resetPasswordVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleResetPassword" :loading="submitting">确定重置</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -1016,7 +1071,8 @@ import customerServiceStore from '../store/customerService'
 import adminStore from '../store/admin'
 import { 
   updateUser, 
-  deleteUser
+  deleteUser,
+  resetUserPassword
 } from '../api/admin'
 import {
   getAllCSEmployeeMappings as getCsEmployeeMappings,
@@ -1072,9 +1128,12 @@ export default {
     const batchAddMappingVisible = ref(false)
     const editMappingVisible = ref(false)
     const reassignVisible = ref(false)
+    const resetPasswordVisible = ref(false)
     const currentCustomerService = ref(null)
+    const currentResetUser = ref(null)
     const currentMapping = ref(null)
     const assignOrderForm = ref(null)
+    const resetPasswordForm = ref(null)
     const uploadRef = ref(null)
     const uploadArea = ref(null)
     const isDragOver = ref(false)
@@ -1149,6 +1208,12 @@ export default {
     const reassignFormData = reactive({
       employeeUserId: null,
       newCsUserId: null
+    })
+    
+    // 重置密码表单数据
+    const resetPasswordFormData = reactive({
+      newPassword: '',
+      confirmPassword: ''
     })
     
     // 手机号验证状态
@@ -1264,6 +1329,28 @@ export default {
     
     const reassignFormRules = {
       newCsUserId: [{ required: true, message: '请选择新客服', trigger: 'change' }]
+    }
+    
+    // 密码验证函数
+    const validateConfirmPassword = (rule, value, callback) => {
+      if (value === '') {
+        callback(new Error('请再次输入密码'))
+      } else if (value !== resetPasswordFormData.newPassword) {
+        callback(new Error('两次输入密码不一致'))
+      } else {
+        callback()
+      }
+    }
+    
+    const resetPasswordFormRules = {
+      newPassword: [
+        { required: true, message: '请输入新密码', trigger: 'blur' },
+        { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: 'blur' }
+      ],
+      confirmPassword: [
+        { required: true, message: '请确认密码', trigger: 'blur' },
+        { validator: validateConfirmPassword, trigger: 'blur' }
+      ]
     }
     
     // 计算属性
@@ -2862,6 +2949,55 @@ export default {
       stopPollingEmployeeCards()
     })
     
+    // 重置密码相关函数
+    const openResetPassword = (user) => {
+      currentResetUser.value = user
+      // 重置表单数据
+      Object.assign(resetPasswordFormData, {
+        newPassword: '',
+        confirmPassword: ''
+      })
+      resetPasswordVisible.value = true
+    }
+    
+    const handleResetPassword = async () => {
+      try {
+        // 表单验证
+        const formRef = resetPasswordForm.value
+        if (formRef) {
+          const valid = await formRef.validate()
+          if (!valid) return
+        }
+        
+        submitting.value = true
+        
+        // 调用重置密码API
+        const result = await resetUserPassword(currentResetUser.value.id, {
+          newPassword: resetPasswordFormData.newPassword,
+          confirmPassword: resetPasswordFormData.confirmPassword
+        })
+        
+        if (result && result.code === 200) {
+          ElMessage.success(`用户 ${currentResetUser.value.realName} 的密码重置成功`)
+          resetPasswordVisible.value = false
+          
+          // 重置表单数据
+          Object.assign(resetPasswordFormData, {
+            newPassword: '',
+            confirmPassword: ''
+          })
+          currentResetUser.value = null
+        } else {
+          ElMessage.error(result?.message || '重置密码失败')
+        }
+      } catch (error) {
+        console.error('重置密码失败:', error)
+        ElMessage.error(error.message || '重置密码失败')
+      } finally {
+        submitting.value = false
+      }
+    }
+    
     return {
       // 响应式数据
       activeTab,
@@ -2879,8 +3015,10 @@ export default {
       batchAddMappingVisible,
       editMappingVisible,
       reassignVisible,
+      resetPasswordVisible,
       currentCustomerService,
       currentMapping,
+      currentResetUser,
       csEmployeeMappings,
       employees,
       cardEmployees,
@@ -2888,6 +3026,7 @@ export default {
       managedEmployees,
       isLoadingManagedEmployees,
       assignOrderForm,
+      resetPasswordForm,
       uploadRef,
       uploadArea,
       isDragOver,
@@ -2900,6 +3039,7 @@ export default {
       batchMappingFormData,
       editMappingFormData,
       reassignFormData,
+      resetPasswordFormData,
       customerServiceFormRules,
       editEmployeeFormRules,
       editCustomerServiceFormRules,
@@ -2907,6 +3047,7 @@ export default {
       batchMappingFormRules,
       editMappingFormRules,
       reassignFormRules,
+      resetPasswordFormRules,
       
       // 计算属性
       totalEmployeeCount,
@@ -2973,7 +3114,11 @@ export default {
       refreshMappings,
       refreshCardEmployees,
       startPollingEmployeeCards,
-      stopPollingEmployeeCards
+      stopPollingEmployeeCards,
+      
+      // 重置密码功能
+      openResetPassword,
+      handleResetPassword
     }
   }
 }
@@ -3542,26 +3687,31 @@ export default {
 /* 操作按钮样式 */
 .table-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   justify-content: center;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   position: relative;
   z-index: 5;
-  padding: 2px 0;
+  padding: 4px 0;
+  white-space: nowrap;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .action-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 13px;
+  gap: 2px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
   font-weight: 500;
   transition: all 0.3s ease;
   border: 1px solid #d9ecff;
   background-color: #f0f9ff;
+  min-width: auto;
+  white-space: nowrap;
 }
 
 .action-btn:hover {
@@ -3817,4 +3967,61 @@ export default {
   border-top: 1px solid #e9ecef;
   text-align: center;
 }
+
+/* 重置密码对话框样式 */
+
+/* 重置密码对话框专用样式 */
+.reset-password-dialog .el-dialog__header {
+  text-align: center;
+  padding: 20px 20px 10px;
+}
+
+.reset-password-dialog .el-dialog__title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.reset-password-dialog .el-dialog__body {
+  padding: 20px;
+}
+
+.reset-password-dialog .el-form {
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.reset-password-dialog .el-form-item__label {
+  text-align: right;
+  font-weight: 500;
+}
+
+.reset-password-dialog .el-form-item__content {
+  text-align: left;
+}
+
+.reset-password-dialog .el-dialog__footer {
+  text-align: center;
+  padding: 10px 20px 20px;
+}
+
+.action-btn.warning {
+  background-color: #fef0f0;
+  border-color: #f9cf8c;
+  color: #e6a23c;
+}
+
+.action-btn.warning:hover {
+  background-color: #f56c6c;
+  border-color: #f56c6c;
+  color: #fff;
+}
+
+/* 确保操作列完全居中 */
+.el-table__fixed-right .el-table__cell,
+.el-table__body .el-table__cell:last-child {
+  text-align: center;
+  vertical-align: middle;
+}
+
+
 </style>

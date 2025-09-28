@@ -140,6 +140,27 @@ export const deleteUser = async (userId) => {
   }
 }
 
+/**
+ * 重置用户密码
+ * @param {number} userId - 用户ID
+ * @param {Object} resetData - 重置密码数据
+ * @param {string} resetData.newPassword - 新密码
+ * @param {string} resetData.confirmPassword - 确认密码
+ * @returns {Promise} 重置结果
+ */
+export const resetUserPassword = async (userId, resetData) => {
+  try {
+    const response = await http.put(`/admin/users/${userId}/reset-password`, {
+      newPassword: resetData.newPassword,
+      confirmPassword: resetData.confirmPassword
+    })
+    return response
+  } catch (error) {
+    console.error('重置用户密码失败:', error)
+    throw error
+  }
+}
+
 
 /**
  * 获取所有工单
